@@ -4,7 +4,8 @@ A personal AI agent for course transcription, structured notes, and conversation
 
 ## Project Status
 
-The system design is approved. Application implementation has not started yet.
+The authentication increment is complete. It provides registration, login, access-token
+authentication, refresh-token rotation, logout, and current-user lookup.
 
 ## First-Phase Scope
 
@@ -31,6 +32,7 @@ Redis, RabbitMQ, microservices, vector databases, Feishu integration, and the li
 
 - [System design](docs/superpowers/specs/2026-08-23-personal-agent-design.md)
 - [Foundation and authentication implementation plan](docs/superpowers/plans/2026-08-23-foundation-auth-implementation.md)
+- [Local development setup](docs/development/local-setup.md)
 
 ## License
 

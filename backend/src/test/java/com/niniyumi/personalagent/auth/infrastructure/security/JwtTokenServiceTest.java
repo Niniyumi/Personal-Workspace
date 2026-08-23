@@ -17,7 +17,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
 class JwtTokenServiceTest {
     private static final Instant NOW = Instant.parse("2026-08-23T08:00:00Z");
-    private static final String SECRET = "01234567890123456789012345678901";
+    private static final String SECRET = "test-jwt-secret-for-unit-tests-01";
 
     @Test
     void issuedTokenContainsUserIdentityAndFifteenMinuteExpiry() {

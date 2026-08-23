@@ -42,14 +42,14 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         service = new AuthService(userRepository, passwordEncoder, refreshTokenService, jwtTokenService);
-        command = new RegisterCommand("nini", "nini@example.com", "Password123", "Nini");
+        command = new RegisterCommand("nini", "nini@example.com", "UnitTest7!", "Nini");
     }
 
     @Test
     void registerHashesPasswordAndSavesActiveUser() {
         when(userRepository.existsByUsername("nini")).thenReturn(false);
         when(userRepository.existsByEmail("nini@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("Password123")).thenReturn("bcrypt-hash");
+        when(passwordEncoder.encode("UnitTest7!")).thenReturn("bcrypt-hash");
         when(userRepository.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0), 42L));
 
         User user = service.register(command);
@@ -79,7 +79,7 @@ class AuthServiceTest {
     @Test
     void registerRejectsUsernameThatMatchesExistingEmailWithUsernameConflictCode() {
         RegisterCommand crossNamespaceCommand = new RegisterCommand(
-                "existing@example.com", "new@example.com", "Password123", "Nini");
+                "existing@example.com", "new@example.com", "UnitTest7!", "Nini");
         when(userRepository.existsByUsername("existing@example.com")).thenReturn(false);
         when(userRepository.findByUsernameOrEmail("existing@example.com")).thenReturn(Optional.of(
                 new User(42L, "existing", "existing@example.com", "bcrypt-hash", "Existing",
@@ -92,7 +92,7 @@ class AuthServiceTest {
     @Test
     void registerRejectsEmailThatMatchesExistingUsernameWithEmailConflictCode() {
         RegisterCommand crossNamespaceCommand = new RegisterCommand(
-                "new-user", "existing", "Password123", "Nini");
+                "new-user", "existing", "UnitTest7!", "Nini");
         when(userRepository.existsByUsername("new-user")).thenReturn(false);
         when(userRepository.existsByEmail("existing")).thenReturn(false);
         when(userRepository.findByUsernameOrEmail("new-user")).thenReturn(Optional.empty());
@@ -108,11 +108,11 @@ class AuthServiceTest {
     void loginReturnsAccessAndRefreshTokensForActiveUserWithMatchingPassword() {
         User user = activeUser();
         when(userRepository.findByUsernameOrEmail("nini")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("Password123", "bcrypt-hash")).thenReturn(true);
+        when(passwordEncoder.matches("UnitTest7!", "bcrypt-hash")).thenReturn(true);
         when(jwtTokenService.issueAccessToken(user)).thenReturn("access-token");
         when(refreshTokenService.issue(42L)).thenReturn(new IssuedRefreshToken("refresh-token", session(1L)));
 
-        LoginResult result = service.login(new LoginCommand("nini", "Password123"));
+        LoginResult result = service.login(new LoginCommand("nini", "UnitTest7!"));
 
         assertThat(result.accessToken()).isEqualTo("access-token");
         assertThat(result.refreshToken()).isEqualTo("refresh-token");
@@ -122,16 +122,16 @@ class AuthServiceTest {
     void loginRejectsMissingUserWithGenericCredentialsFailure() {
         when(userRepository.findByUsernameOrEmail("missing")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.login(new LoginCommand("missing", "Password123")))
+        assertThatThrownBy(() -> service.login(new LoginCommand("missing", "UnitTest7!")))
                 .isInstanceOf(InvalidCredentialsException.class);
     }
 
     @Test
     void loginRejectsWrongPasswordWithGenericCredentialsFailure() {
         when(userRepository.findByUsernameOrEmail("nini")).thenReturn(Optional.of(activeUser()));
-        when(passwordEncoder.matches("Password123", "bcrypt-hash")).thenReturn(false);
+        when(passwordEncoder.matches("UnitTest7!", "bcrypt-hash")).thenReturn(false);
 
-        assertThatThrownBy(() -> service.login(new LoginCommand("nini", "Password123")))
+        assertThatThrownBy(() -> service.login(new LoginCommand("nini", "UnitTest7!")))
                 .isInstanceOf(InvalidCredentialsException.class);
     }
 
@@ -141,7 +141,7 @@ class AuthServiceTest {
                 UserStatus.DISABLED, null, null);
         when(userRepository.findByUsernameOrEmail("nini")).thenReturn(Optional.of(disabledUser));
 
-        assertThatThrownBy(() -> service.login(new LoginCommand("nini", "Password123")))
+        assertThatThrownBy(() -> service.login(new LoginCommand("nini", "UnitTest7!")))
                 .isInstanceOf(InvalidCredentialsException.class);
     }
 

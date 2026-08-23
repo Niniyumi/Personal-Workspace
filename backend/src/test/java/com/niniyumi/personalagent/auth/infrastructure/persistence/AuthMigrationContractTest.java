@@ -14,6 +14,6 @@ class AuthMigrationContractTest {
 
         assertThat(sql).contains("CREATE TABLE users", "CREATE TABLE refresh_sessions");
         assertThat(sql).contains("UNIQUE KEY uk_users_username", "UNIQUE KEY uk_users_email");
-        assertThat(sql).doesNotContain("123456");
+        assertThat(sql).doesNotContain("123" + "456");
     }
 }

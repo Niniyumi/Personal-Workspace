@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(value = CurrentUserController.class, properties = "app.security.jwt-secret=01234567890123456789012345678901")
+@WebMvcTest(value = CurrentUserController.class, properties = "app.security.jwt-secret=test-jwt-secret-for-webmvc-tests-01")
 @Import({CurrentUserController.class, SecurityConfig.class})
 class CurrentUserControllerTest {
     @Autowired

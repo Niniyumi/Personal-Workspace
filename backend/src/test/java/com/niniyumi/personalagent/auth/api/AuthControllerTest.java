@@ -40,7 +40,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"nini","email":"nini@example.com",
-                                 "password":"Password123","displayName":"Nini"}
+                                 "password":"UnitTest7!","displayName":"Nini"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(42))
@@ -63,7 +63,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"nini@example.com","email":"nini@example.com",
-                                 "password":"Password123","displayName":"Nini"}
+                                 "password":"UnitTest7!","displayName":"Nini"}
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
@@ -77,7 +77,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"nini","email":"nini@example.com",
-                                 "password":"Password123","displayName":"Nini"}
+                                 "password":"UnitTest7!","displayName":"Nini"}
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("USERNAME_EXISTS"));
@@ -90,7 +90,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"login":"nini","password":"Password123"}
+                                {"login":"nini","password":"UnitTest7!"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("access-token"))
@@ -106,7 +106,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"login":"nini","password":"Password123"}
+                                {"login":"nini","password":"UnitTest7!"}
                                 """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));

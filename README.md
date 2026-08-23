@@ -4,11 +4,9 @@ A personal AI agent for course transcription, structured notes, and conversation
 
 ## Project Status
 
-The authentication increment is complete and verified against live MySQL. Flyway schema
-version 1 and the full HTTP authentication flow have passed smoke verification, including
-refresh-token rotation and one-time token consumption. The implemented flow provides
-registration, login, access-token authentication, refresh-token rotation, logout, and
-current-user lookup.
+The authentication backend and Vue web interface are implemented. The current increment
+provides registration, login, session restoration, refresh-token rotation, logout,
+route protection, and a responsive personal workspace.
 
 ## First-Phase Scope
 
@@ -36,6 +34,9 @@ Redis, RabbitMQ, microservices, vector databases, Feishu integration, and the li
 - [System design](docs/superpowers/specs/2026-08-23-personal-agent-design.md)
 - [Foundation and authentication implementation plan](docs/superpowers/plans/2026-08-23-foundation-auth-implementation.md)
 - [Local development setup](docs/development/local-setup.md)
+- [Frontend setup](frontend/README.md)
+- [Login test cases](docs/testing/login-ui-test-cases.md)
+- [Daily progress](docs/progress/README.md)
 
 ## License
 

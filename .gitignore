@@ -31,8 +31,8 @@ exports/
 
 # Visual brainstorming and agent working memory
 .superpowers/
+.worktrees/
 .planning/
 task_plan.md
 findings.md
 progress.md
-

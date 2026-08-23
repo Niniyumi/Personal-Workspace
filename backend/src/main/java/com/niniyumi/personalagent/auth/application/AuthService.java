@@ -32,7 +32,13 @@ public class AuthService {
         if (userRepository.existsByUsername(username)) {
             throw new UsernameAlreadyExistsException();
         }
+        if (userRepository.findByUsernameOrEmail(username).isPresent()) {
+            throw new UsernameAlreadyExistsException();
+        }
         if (userRepository.existsByEmail(email)) {
+            throw new EmailAlreadyExistsException();
+        }
+        if (userRepository.findByUsernameOrEmail(email).isPresent()) {
             throw new EmailAlreadyExistsException();
         }
         return userRepository.save(new User(null, username, email,
@@ -50,17 +56,16 @@ public class AuthService {
 
     @Transactional
     public LoginResult refresh(String refreshToken) {
-        RefreshSession session = refreshTokenService.validate(refreshToken);
+        RefreshSession session = refreshTokenService.consume(refreshToken);
         User user = userRepository.findById(session.userId())
                 .filter(candidate -> candidate.status() == UserStatus.ACTIVE)
                 .orElseThrow(InvalidRefreshTokenException::new);
-        refreshTokenService.revoke(session);
         return issueTokens(user);
     }
 
     @Transactional
     public void logout(String refreshToken) {
-        refreshTokenService.revoke(refreshTokenService.validate(refreshToken));
+        refreshTokenService.consume(refreshToken);
     }
 
     private LoginResult issueTokens(User user) {

@@ -8,5 +8,5 @@ public interface RefreshSessionRepository {
 
     Optional<RefreshSession> findByTokenHash(String tokenHash);
 
-    void revoke(long id, Instant revokedAt);
+    boolean revokeIfActive(long id, Instant revokedAt);
 }

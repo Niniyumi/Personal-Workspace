@@ -31,9 +31,11 @@ public class MybatisRefreshSessionRepository implements RefreshSessionRepository
     }
 
     @Override
-    public void revoke(long id, Instant revokedAt) {
-        refreshSessionMapper.update(null, new LambdaUpdateWrapper<RefreshSessionRow>()
+    public boolean revokeIfActive(long id, Instant revokedAt) {
+        return refreshSessionMapper.update(null, new LambdaUpdateWrapper<RefreshSessionRow>()
                 .eq(RefreshSessionRow::getId, id)
-                .set(RefreshSessionRow::getRevokedAt, revokedAt));
+                .isNull(RefreshSessionRow::getRevokedAt)
+                .gt(RefreshSessionRow::getExpiresAt, revokedAt)
+                .set(RefreshSessionRow::getRevokedAt, revokedAt)) == 1;
     }
 }

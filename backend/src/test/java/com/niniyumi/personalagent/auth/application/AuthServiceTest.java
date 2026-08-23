@@ -77,6 +77,34 @@ class AuthServiceTest {
     }
 
     @Test
+    void registerRejectsUsernameThatMatchesExistingEmailWithUsernameConflictCode() {
+        RegisterCommand crossNamespaceCommand = new RegisterCommand(
+                "existing@example.com", "new@example.com", "Password123", "Nini");
+        when(userRepository.existsByUsername("existing@example.com")).thenReturn(false);
+        when(userRepository.findByUsernameOrEmail("existing@example.com")).thenReturn(Optional.of(
+                new User(42L, "existing", "existing@example.com", "bcrypt-hash", "Existing",
+                        UserStatus.ACTIVE, null, null)));
+
+        assertThatThrownBy(() -> service.register(crossNamespaceCommand))
+                .isInstanceOf(UsernameAlreadyExistsException.class);
+    }
+
+    @Test
+    void registerRejectsEmailThatMatchesExistingUsernameWithEmailConflictCode() {
+        RegisterCommand crossNamespaceCommand = new RegisterCommand(
+                "new-user", "existing", "Password123", "Nini");
+        when(userRepository.existsByUsername("new-user")).thenReturn(false);
+        when(userRepository.existsByEmail("existing")).thenReturn(false);
+        when(userRepository.findByUsernameOrEmail("new-user")).thenReturn(Optional.empty());
+        when(userRepository.findByUsernameOrEmail("existing")).thenReturn(Optional.of(
+                new User(42L, "existing", "existing@example.com", "bcrypt-hash", "Existing",
+                        UserStatus.ACTIVE, null, null)));
+
+        assertThatThrownBy(() -> service.register(crossNamespaceCommand))
+                .isInstanceOf(EmailAlreadyExistsException.class);
+    }
+
+    @Test
     void loginReturnsAccessAndRefreshTokensForActiveUserWithMatchingPassword() {
         User user = activeUser();
         when(userRepository.findByUsernameOrEmail("nini")).thenReturn(Optional.of(user));
@@ -121,7 +149,7 @@ class AuthServiceTest {
     void refreshRevokesUsedActiveSessionBeforeIssuingReplacement() {
         User user = activeUser();
         RefreshSession usedSession = session(1L);
-        when(refreshTokenService.validate("used-token")).thenReturn(usedSession);
+        when(refreshTokenService.consume("used-token")).thenReturn(usedSession);
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
         when(jwtTokenService.issueAccessToken(user)).thenReturn("new-access-token");
         when(refreshTokenService.issue(42L)).thenReturn(new IssuedRefreshToken("new-refresh-token", session(2L)));
@@ -131,18 +159,18 @@ class AuthServiceTest {
         assertThat(result.accessToken()).isEqualTo("new-access-token");
         assertThat(result.refreshToken()).isEqualTo("new-refresh-token");
         InOrder order = inOrder(refreshTokenService);
-        order.verify(refreshTokenService).revoke(usedSession);
+        order.verify(refreshTokenService).consume("used-token");
         order.verify(refreshTokenService).issue(42L);
     }
 
     @Test
     void logoutRevokesMatchingActiveSession() {
         RefreshSession usedSession = session(1L);
-        when(refreshTokenService.validate("used-token")).thenReturn(usedSession);
+        when(refreshTokenService.consume("used-token")).thenReturn(usedSession);
 
         service.logout("used-token");
 
-        org.mockito.Mockito.verify(refreshTokenService).revoke(eq(usedSession));
+        org.mockito.Mockito.verify(refreshTokenService).consume(eq("used-token"));
     }
 
     private User withId(User user, long id) {

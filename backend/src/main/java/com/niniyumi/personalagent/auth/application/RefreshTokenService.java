@@ -31,21 +31,29 @@ public class RefreshTokenService {
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         Instant now = clock.instant();
         RefreshSession session = new RefreshSession(null, userId, hash(token), now.plus(7, ChronoUnit.DAYS), null, now);
-        repository.save(session);
-        return new IssuedRefreshToken(token, session);
+        return new IssuedRefreshToken(token, repository.save(session));
     }
 
     public RefreshSession validate(String token) {
-        RefreshSession session = repository.findByTokenHash(hash(token))
-                .orElseThrow(InvalidRefreshTokenException::new);
-        if (!session.isActive(clock.instant())) {
+        return validate(token, clock.instant());
+    }
+
+    public RefreshSession consume(String token) {
+        Instant now = clock.instant();
+        RefreshSession session = validate(token, now);
+        if (!repository.revokeIfActive(session.id(), now)) {
             throw new InvalidRefreshTokenException();
         }
         return session;
     }
 
-    public void revoke(RefreshSession session) {
-        repository.revoke(session.id(), clock.instant());
+    private RefreshSession validate(String token, Instant now) {
+        RefreshSession session = repository.findByTokenHash(hash(token))
+                .orElseThrow(InvalidRefreshTokenException::new);
+        if (!session.isActive(now)) {
+            throw new InvalidRefreshTokenException();
+        }
+        return session;
     }
 
     private String hash(String token) {

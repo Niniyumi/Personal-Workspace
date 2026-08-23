@@ -36,6 +36,10 @@ class RefreshTokenServiceTest {
 
     @Test
     void issueStoresOnlySha256HashAndReturnsOpaqueToken() {
+        RefreshSession persistedSession = new RefreshSession(7L, 42L, "persisted-hash",
+                NOW.plus(7, ChronoUnit.DAYS), null, NOW);
+        when(repository.save(org.mockito.ArgumentMatchers.any(RefreshSession.class))).thenReturn(persistedSession);
+
         IssuedRefreshToken issued = service.issue(42L);
         ArgumentCaptor<RefreshSession> session = ArgumentCaptor.forClass(RefreshSession.class);
         verify(repository).save(session.capture());
@@ -44,6 +48,7 @@ class RefreshTokenServiceTest {
         assertThat(session.getValue().tokenHash()).isNotEqualTo(issued.value());
         assertThat(session.getValue().tokenHash()).matches("[0-9a-f]{64}");
         assertThat(session.getValue().expiresAt()).isEqualTo(NOW.plus(7, ChronoUnit.DAYS));
+        assertThat(issued.session()).isEqualTo(persistedSession);
     }
 
     @Test
@@ -62,5 +67,24 @@ class RefreshTokenServiceTest {
 
         assertThatThrownBy(() -> service.validate("opaque-token"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    @Test
+    void consumeRejectsSessionWhenAnotherRequestAlreadyConsumedIt() {
+        when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(
+                new RefreshSession(1L, 42L, "hash", NOW.plus(7, ChronoUnit.DAYS), null, NOW)));
+        when(repository.revokeIfActive(1L, NOW)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.consume("opaque-token"))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+    }
+
+    @Test
+    void consumeReturnsSessionAfterAtomicallyRevokingIt() {
+        RefreshSession session = new RefreshSession(1L, 42L, "hash", NOW.plus(7, ChronoUnit.DAYS), null, NOW);
+        when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(session));
+        when(repository.revokeIfActive(1L, NOW)).thenReturn(true);
+
+        assertThat(service.consume("opaque-token")).isEqualTo(session);
     }
 }

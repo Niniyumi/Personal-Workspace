@@ -106,22 +106,25 @@ class AuthServiceTest {
     }
 
     @Test
-    void registerTranslatesConcurrentUsernameInsertToUsernameConflict() {
-        when(userRepository.existsByUsername("nini")).thenReturn(false, true);
+    void registerTranslatesUsernameConstraintFromMostSpecificCause() {
+        when(userRepository.existsByUsername("nini")).thenReturn(false);
         when(userRepository.existsByEmail("nini@example.com")).thenReturn(false);
         when(passwordEncoder.encode("UnitTest7!")).thenReturn("bcrypt-hash");
-        when(userRepository.save(any())).thenThrow(new DuplicateKeyException("database detail"));
+        when(userRepository.save(any())).thenThrow(new DuplicateKeyException("write failed",
+                new IllegalStateException("Duplicate entry for key 'work.users.uk_users_username'")));
 
         assertThatThrownBy(() -> service.register(command))
                 .isInstanceOf(UsernameAlreadyExistsException.class);
     }
 
     @Test
-    void registerTranslatesConcurrentEmailInsertToEmailConflict() {
-        when(userRepository.existsByUsername("nini")).thenReturn(false, false);
-        when(userRepository.existsByEmail("nini@example.com")).thenReturn(false, true);
+    void registerTranslatesEmailConstraintFromOuterExceptionMessage() {
+        when(userRepository.existsByUsername("nini")).thenReturn(false);
+        when(userRepository.existsByEmail("nini@example.com")).thenReturn(false);
         when(passwordEncoder.encode("UnitTest7!")).thenReturn("bcrypt-hash");
-        when(userRepository.save(any())).thenThrow(new DuplicateKeyException("database detail"));
+        when(userRepository.save(any())).thenThrow(new DuplicateKeyException(
+                "Duplicate entry for key 'work.users.uk_users_email'",
+                new IllegalStateException("driver failure")));
 
         assertThatThrownBy(() -> service.register(command))
                 .isInstanceOf(EmailAlreadyExistsException.class);
@@ -129,7 +132,8 @@ class AuthServiceTest {
 
     @Test
     void registerPreservesUnidentifiedDuplicateKeyFailure() {
-        DuplicateKeyException duplicateKey = new DuplicateKeyException("database detail");
+        DuplicateKeyException duplicateKey = new DuplicateKeyException(
+                "Duplicate entry for key 'work.users.uk_refresh_sessions_token_hash'");
         when(userRepository.existsByUsername("nini")).thenReturn(false);
         when(userRepository.existsByEmail("nini@example.com")).thenReturn(false);
         when(passwordEncoder.encode("UnitTest7!")).thenReturn("bcrypt-hash");

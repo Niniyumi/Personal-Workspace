@@ -7,6 +7,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.niniyumi.personalagent.auth.application.AuthService;
+import com.niniyumi.personalagent.auth.application.InvalidCredentialsException;
+import com.niniyumi.personalagent.auth.application.InvalidRefreshTokenException;
+import com.niniyumi.personalagent.auth.application.LoginCommand;
+import com.niniyumi.personalagent.auth.application.LoginResult;
 import com.niniyumi.personalagent.auth.application.RegisterCommand;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
 import com.niniyumi.personalagent.auth.domain.User;
@@ -65,6 +69,72 @@ class AuthControllerTest {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("USERNAME_EXISTS"));
+    }
+
+    @Test
+    void loginReturnsBothTokensUsingBearerContract() throws Exception {
+        when(authService.login(any(LoginCommand.class))).thenReturn(new LoginResult("access-token", "refresh-token"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"login":"nini","password":"Password123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.expiresInSeconds").value(900));
+    }
+
+    @Test
+    void loginMapsInvalidCredentialsToGenericUnauthorizedResponse() throws Exception {
+        when(authService.login(any(LoginCommand.class))).thenThrow(new InvalidCredentialsException());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"login":"nini","password":"Password123"}
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+    }
+
+    @Test
+    void refreshReturnsReplacementTokenPair() throws Exception {
+        when(authService.refresh("used-token")).thenReturn(new LoginResult("new-access-token", "new-refresh-token"));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"used-token"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("new-access-token"))
+                .andExpect(jsonPath("$.refreshToken").value("new-refresh-token"));
+    }
+
+    @Test
+    void refreshMapsInvalidTokenToUnauthorizedResponse() throws Exception {
+        when(authService.refresh("invalid-token")).thenThrow(new InvalidRefreshTokenException());
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"invalid-token"}
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @Test
+    void logoutReturnsNoContentForActiveSession() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"used-token"}
+                                """))
+                .andExpect(status().isNoContent());
     }
 
     private User user() {

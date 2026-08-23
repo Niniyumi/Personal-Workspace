@@ -1,6 +1,8 @@
 package com.niniyumi.personalagent.common.api;
 
 import com.niniyumi.personalagent.auth.application.EmailAlreadyExistsException;
+import com.niniyumi.personalagent.auth.application.InvalidCredentialsException;
+import com.niniyumi.personalagent.auth.application.InvalidRefreshTokenException;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ResponseEntity<ApiErrorResponse> handleEmailAlreadyExists() {
         return error(HttpStatus.CONFLICT, "EMAIL_EXISTS", "Email already exists");
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidCredentials() {
+        return error(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid credentials");
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidRefreshToken() {
+        return error(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", "Invalid refresh token");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

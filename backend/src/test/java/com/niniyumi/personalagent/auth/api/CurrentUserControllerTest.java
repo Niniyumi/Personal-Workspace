@@ -1,0 +1,55 @@
+package com.niniyumi.personalagent.auth.api;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.niniyumi.personalagent.auth.domain.User;
+import com.niniyumi.personalagent.auth.domain.UserRepository;
+import com.niniyumi.personalagent.auth.domain.UserStatus;
+import com.niniyumi.personalagent.auth.infrastructure.security.AuthenticatedUser;
+import com.niniyumi.personalagent.auth.infrastructure.security.SecurityConfig;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.test.web.servlet.MockMvc;
+
+@WebMvcTest(value = CurrentUserController.class, properties = "app.security.jwt-secret=01234567890123456789012345678901")
+@Import({CurrentUserController.class, SecurityConfig.class})
+class CurrentUserControllerTest {
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private UserRepository userRepository;
+
+    @Test
+    void currentUserRejectsAnonymousRequests() throws Exception {
+        mockMvc.perform(get("/api/users/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void currentUserReturnsProfileForAuthenticatedPrincipal() throws Exception {
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user()));
+
+        mockMvc.perform(get("/api/users/me?id=99")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                new AuthenticatedUser(42L, "nini"), "token", List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(42))
+                .andExpect(jsonPath("$.username").value("nini"));
+    }
+
+    private User user() {
+        return new User(42L, "nini", "nini@example.com", "bcrypt-hash", "Nini",
+                UserStatus.ACTIVE, null, null);
+    }
+}

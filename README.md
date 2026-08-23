@@ -30,8 +30,8 @@ Redis, RabbitMQ, microservices, vector databases, Feishu integration, and the li
 ## Documentation
 
 - [System design](docs/superpowers/specs/2026-08-23-personal-agent-design.md)
+- [Foundation and authentication implementation plan](docs/superpowers/plans/2026-08-23-foundation-auth-implementation.md)
 
 ## License
 
 This project is licensed under the MIT License.
-

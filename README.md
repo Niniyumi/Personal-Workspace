@@ -4,7 +4,9 @@ A personal AI agent for course transcription, structured notes, and conversation
 
 ## Project Status
 
-The authentication increment is complete. It provides registration, login, access-token
+The authentication implementation, documentation, and unit tests are complete. Live
+MySQL/Flyway and HTTP smoke verification remains pending local credentials and environment
+setup. The implemented authentication flow provides registration, login, access-token
 authentication, refresh-token rotation, logout, and current-user lookup.
 
 ## First-Phase Scope

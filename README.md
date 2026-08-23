@@ -1,0 +1,37 @@
+# Personal Workspace
+
+A personal AI agent for course transcription, structured notes, and conversational weekly reports.
+
+## Project Status
+
+The system design is approved. Application implementation has not started yet.
+
+## First-Phase Scope
+
+- Multi-user registration and login
+- Agent-centered web interface
+- Up to two hours of browser course recording
+- Asynchronous speech transcription and structured course notes
+- Conversational weekly-report material collection with optional DOCX files
+- On-demand weekly-report generation, editing, storage, and DOCX export
+- Configurable chat and speech-to-text providers
+
+## Architecture
+
+- Java 21 and Spring Boot 3 modular monolith
+- Vue 3, TypeScript, and Vite
+- MySQL 8 with Flyway
+- MyBatis-Plus
+- MinIO object storage
+- Server-Sent Events for task progress
+
+Redis, RabbitMQ, microservices, vector databases, Feishu integration, and the literature assistant are intentionally excluded from the first phase.
+
+## Documentation
+
+- [System design](docs/superpowers/specs/2026-08-23-personal-agent-design.md)
+
+## License
+
+This project is licensed under the MIT License.
+

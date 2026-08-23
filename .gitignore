@@ -1,0 +1,38 @@
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+application-local.yml
+application-secret.yml
+
+# Java and Maven
+backend/target/
+*.class
+*.log
+
+# Node and frontend builds
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+
+# IDE and operating system files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Local service data and user-generated files
+.data/
+recordings/
+uploads/
+exports/
+
+# Visual brainstorming and agent working memory
+.superpowers/
+.planning/
+task_plan.md
+findings.md
+progress.md
+

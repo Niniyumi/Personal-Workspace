@@ -58,6 +58,18 @@ class AuthControllerTest {
     }
 
     @Test
+    void registerRejectsUsernameContainingAtSign() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"nini@example.com","email":"nini@example.com",
+                                 "password":"Password123","displayName":"Nini"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
     void registerMapsDuplicateUsernameToConflict() throws Exception {
         when(authService.register(any(RegisterCommand.class))).thenThrow(new UsernameAlreadyExistsException());
 

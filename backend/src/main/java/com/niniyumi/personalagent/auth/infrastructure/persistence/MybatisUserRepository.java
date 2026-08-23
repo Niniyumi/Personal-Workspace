@@ -35,10 +35,13 @@ public class MybatisUserRepository implements UserRepository {
 
     @Override
     public Optional<User> findByUsernameOrEmail(String login) {
-        return Optional.ofNullable(userMapper.selectOne(new LambdaQueryWrapper<UserRow>()
-                .eq(UserRow::getUsername, login)
-                .or()
-                .eq(UserRow::getEmail, login)))
+        LambdaQueryWrapper<UserRow> query = new LambdaQueryWrapper<>();
+        if (login.contains("@")) {
+            query.eq(UserRow::getEmail, login);
+        } else {
+            query.eq(UserRow::getUsername, login);
+        }
+        return Optional.ofNullable(userMapper.selectOne(query))
                 .map(UserRow::toDomain);
     }
 

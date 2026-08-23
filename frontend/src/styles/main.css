@@ -1,0 +1,50 @@
+:root {
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  color: #134e4a;
+  background: #f0fdfa;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --color-primary: #0f766e;
+  --color-primary-hover: #115e59;
+  --color-background: #f0fdfa;
+  --color-surface: #ffffff;
+  --color-text: #134e4a;
+  --color-muted: #475569;
+  --color-border: #99f6e4;
+  --color-danger: #b91c1c;
+  --color-focus: #0d9488;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

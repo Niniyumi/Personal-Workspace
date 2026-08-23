@@ -4,10 +4,11 @@ A personal AI agent for course transcription, structured notes, and conversation
 
 ## Project Status
 
-The authentication implementation, documentation, and unit tests are complete. Live
-MySQL/Flyway and HTTP smoke verification remains pending local credentials and environment
-setup. The implemented authentication flow provides registration, login, access-token
-authentication, refresh-token rotation, logout, and current-user lookup.
+The authentication increment is complete and verified against live MySQL. Flyway schema
+version 1 and the full HTTP authentication flow have passed smoke verification, including
+refresh-token rotation and one-time token consumption. The implemented flow provides
+registration, login, access-token authentication, refresh-token rotation, logout, and
+current-user lookup.
 
 ## First-Phase Scope
 

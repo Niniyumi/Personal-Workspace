@@ -5,12 +5,7 @@ import com.niniyumi.personalagent.auth.domain.UserRepository;
 import com.niniyumi.personalagent.auth.domain.UserStatus;
 import com.niniyumi.personalagent.auth.domain.RefreshSession;
 import com.niniyumi.personalagent.auth.infrastructure.security.JwtTokenService;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,18 +31,14 @@ public class AuthService {
 
     @Transactional
     public User register(RegisterCommand command) {
+        // 统一规范化登录标识，避免仅因大小写或首尾空格不同而创建重复账户。
         String username = command.username().trim().toLowerCase(Locale.ROOT);
         String email = command.email().trim().toLowerCase(Locale.ROOT);
+        // 应用层预检查用于快速反馈，数据库唯一索引负责并发注册时的最终兜底。
         if (userRepository.existsByUsername(username)) {
             throw new UsernameAlreadyExistsException();
         }
-        if (userRepository.findByUsernameOrEmail(username).isPresent()) {
-            throw new UsernameAlreadyExistsException();
-        }
         if (userRepository.existsByEmail(email)) {
-            throw new EmailAlreadyExistsException();
-        }
-        if (userRepository.findByUsernameOrEmail(email).isPresent()) {
             throw new EmailAlreadyExistsException();
         }
         try {
@@ -55,6 +46,7 @@ public class AuthService {
                     passwordEncoder.encode(command.password()), command.displayName().trim(),
                     UserStatus.ACTIVE, null, null));
         } catch (DuplicateKeyException exception) {
+            // 并发请求可能同时通过预检查，因此按唯一索引名称转换为稳定的业务错误。
             String constraint = duplicateConstraint(exception);
             if (USERNAME_CONSTRAINT.equals(constraint)) {
                 throw new UsernameAlreadyExistsException();
@@ -93,20 +85,16 @@ public class AuthService {
     }
 
     private String duplicateConstraint(Throwable exception) {
-        List<Throwable> causes = new ArrayList<>();
-        Set<Throwable> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-        for (Throwable current = exception; current != null && seen.add(current); current = current.getCause()) {
-            causes.add(current);
-        }
-        for (int index = causes.size() - 1; index >= 0; index--) {
-            String message = causes.get(index).getMessage();
+        for (Throwable current = exception; current != null; current = current.getCause()) {
+            String message = current.getMessage();
             if (message == null) {
                 continue;
             }
-            int usernameIndex = message.lastIndexOf(USERNAME_CONSTRAINT);
-            int emailIndex = message.lastIndexOf(EMAIL_CONSTRAINT);
-            if (usernameIndex >= 0 || emailIndex >= 0) {
-                return usernameIndex > emailIndex ? USERNAME_CONSTRAINT : EMAIL_CONSTRAINT;
+            if (message.contains(USERNAME_CONSTRAINT)) {
+                return USERNAME_CONSTRAINT;
+            }
+            if (message.contains(EMAIL_CONSTRAINT)) {
+                return EMAIL_CONSTRAINT;
             }
         }
         return null;

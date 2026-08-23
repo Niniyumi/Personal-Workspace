@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.niniyumi.personalagent.auth.domain.User;
@@ -58,6 +60,10 @@ class AuthServiceTest {
         assertThat(user.id()).isEqualTo(42L);
         assertThat(user.passwordHash()).isEqualTo("bcrypt-hash");
         assertThat(user.status()).isEqualTo(UserStatus.ACTIVE);
+        verify(userRepository).existsByUsername("nini");
+        verify(userRepository).existsByEmail("nini@example.com");
+        verify(userRepository).save(any());
+        verifyNoMoreInteractions(userRepository);
     }
 
     @Test
@@ -74,34 +80,6 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("nini@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> service.register(command))
-                .isInstanceOf(EmailAlreadyExistsException.class);
-    }
-
-    @Test
-    void registerRejectsUsernameThatMatchesExistingEmailWithUsernameConflictCode() {
-        RegisterCommand crossNamespaceCommand = new RegisterCommand(
-                "existing@example.com", "new@example.com", "UnitTest7!", "Nini");
-        when(userRepository.existsByUsername("existing@example.com")).thenReturn(false);
-        when(userRepository.findByUsernameOrEmail("existing@example.com")).thenReturn(Optional.of(
-                new User(42L, "existing", "existing@example.com", "bcrypt-hash", "Existing",
-                        UserStatus.ACTIVE, null, null)));
-
-        assertThatThrownBy(() -> service.register(crossNamespaceCommand))
-                .isInstanceOf(UsernameAlreadyExistsException.class);
-    }
-
-    @Test
-    void registerRejectsEmailThatMatchesExistingUsernameWithEmailConflictCode() {
-        RegisterCommand crossNamespaceCommand = new RegisterCommand(
-                "new-user", "existing", "UnitTest7!", "Nini");
-        when(userRepository.existsByUsername("new-user")).thenReturn(false);
-        when(userRepository.existsByEmail("existing")).thenReturn(false);
-        when(userRepository.findByUsernameOrEmail("new-user")).thenReturn(Optional.empty());
-        when(userRepository.findByUsernameOrEmail("existing")).thenReturn(Optional.of(
-                new User(42L, "existing", "existing@example.com", "bcrypt-hash", "Existing",
-                        UserStatus.ACTIVE, null, null)));
-
-        assertThatThrownBy(() -> service.register(crossNamespaceCommand))
                 .isInstanceOf(EmailAlreadyExistsException.class);
     }
 

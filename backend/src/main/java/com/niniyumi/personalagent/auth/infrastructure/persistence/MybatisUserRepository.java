@@ -36,6 +36,7 @@ public class MybatisUserRepository implements UserRepository {
     @Override
     public Optional<User> findByUsernameOrEmail(String login) {
         LambdaQueryWrapper<UserRow> query = new LambdaQueryWrapper<>();
+        // 用户名禁止包含 @，因此可以按输入形态只命中一个唯一索引，避免 OR 查询歧义。
         if (login.contains("@")) {
             query.eq(UserRow::getEmail, login);
         } else {

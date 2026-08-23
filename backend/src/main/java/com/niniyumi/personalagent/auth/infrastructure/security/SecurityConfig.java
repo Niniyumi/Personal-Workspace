@@ -40,11 +40,13 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, ApiSecurityErrorHandler errorHandler) throws Exception {
+        // 将 JWT 声明转换为业务层可直接使用的当前用户身份。
         Converter<Jwt, AbstractAuthenticationToken> converter = jwt ->
                 new UsernamePasswordAuthenticationToken(
                         new AuthenticatedUser(Long.parseLong(jwt.getSubject()), jwt.getClaimAsString("username")),
                         jwt,
                         List.of());
+        // API 使用无状态 JWT，不创建服务端 Session；公开端点仅限认证入口。
         return http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth

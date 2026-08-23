@@ -29,6 +29,7 @@ public class RefreshTokenService {
     }
 
     public IssuedRefreshToken issue(long userId) {
+        // 明文令牌只返回给客户端，数据库中始终只保存不可逆的 SHA-256 摘要。
         byte[] bytes = new byte[32];
         SECURE_RANDOM.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -38,13 +39,10 @@ public class RefreshTokenService {
         return new IssuedRefreshToken(token, repository.save(session));
     }
 
-    public RefreshSession validate(String token) {
-        return validate(token, clock.instant());
-    }
-
     public RefreshSession consume(String token) {
         Instant now = clock.instant();
         RefreshSession session = validate(token, now);
+        // 条件更新必须只影响一行，保证同一个刷新令牌只能成功使用一次。
         if (!repository.revokeIfActive(session.id(), now)) {
             throw new InvalidRefreshTokenException();
         }

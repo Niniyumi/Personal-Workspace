@@ -54,20 +54,20 @@ class RefreshTokenServiceTest {
     }
 
     @Test
-    void validateRejectsRevokedSession() {
+    void consumeRejectsRevokedSession() {
         when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(
                 new RefreshSession(1L, 42L, "hash", NOW.plus(7, ChronoUnit.DAYS), NOW, NOW)));
 
-        assertThatThrownBy(() -> service.validate("opaque-token"))
+        assertThatThrownBy(() -> service.consume("opaque-token"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
     }
 
     @Test
-    void validateRejectsExpiredSession() {
+    void consumeRejectsExpiredSession() {
         when(repository.findByTokenHash(anyString())).thenReturn(Optional.of(
                 new RefreshSession(1L, 42L, "hash", NOW, null, NOW.minus(7, ChronoUnit.DAYS))));
 
-        assertThatThrownBy(() -> service.validate("opaque-token"))
+        assertThatThrownBy(() -> service.consume("opaque-token"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
     }
 

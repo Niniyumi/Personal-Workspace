@@ -39,6 +39,7 @@ public class ApiSecurityErrorHandler implements AuthenticationEntryPoint, Access
 
     private void write(HttpServletResponse response, HttpStatus status, String code, String message)
             throws IOException {
+        // 安全过滤器异常不会进入 RestControllerAdvice，因此在过滤器层直接输出统一结构。
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(),

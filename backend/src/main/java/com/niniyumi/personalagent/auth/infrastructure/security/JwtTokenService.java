@@ -29,6 +29,7 @@ public class JwtTokenService {
 
     public String issueAccessToken(User user) {
         Instant issuedAt = clock.instant();
+        // sub 只保存稳定的用户 ID；用户名仅作为展示性声明，不作为数据库主键。
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(user.id().toString())
                 .claim("username", user.username())

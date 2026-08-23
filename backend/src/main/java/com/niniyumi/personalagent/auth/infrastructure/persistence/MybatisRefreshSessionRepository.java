@@ -32,6 +32,7 @@ public class MybatisRefreshSessionRepository implements RefreshSessionRepository
 
     @Override
     public boolean revokeIfActive(long id, Instant revokedAt) {
+        // 在一条 SQL 中同时校验未撤销和未过期，避免并发请求重复消费令牌。
         return refreshSessionMapper.update(null, new LambdaUpdateWrapper<RefreshSessionRow>()
                 .eq(RefreshSessionRow::getId, id)
                 .isNull(RefreshSessionRow::getRevokedAt)

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.InOrder;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -102,6 +103,40 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> service.register(crossNamespaceCommand))
                 .isInstanceOf(EmailAlreadyExistsException.class);
+    }
+
+    @Test
+    void registerTranslatesConcurrentUsernameInsertToUsernameConflict() {
+        when(userRepository.existsByUsername("nini")).thenReturn(false, true);
+        when(userRepository.existsByEmail("nini@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("UnitTest7!")).thenReturn("bcrypt-hash");
+        when(userRepository.save(any())).thenThrow(new DuplicateKeyException("database detail"));
+
+        assertThatThrownBy(() -> service.register(command))
+                .isInstanceOf(UsernameAlreadyExistsException.class);
+    }
+
+    @Test
+    void registerTranslatesConcurrentEmailInsertToEmailConflict() {
+        when(userRepository.existsByUsername("nini")).thenReturn(false, false);
+        when(userRepository.existsByEmail("nini@example.com")).thenReturn(false, true);
+        when(passwordEncoder.encode("UnitTest7!")).thenReturn("bcrypt-hash");
+        when(userRepository.save(any())).thenThrow(new DuplicateKeyException("database detail"));
+
+        assertThatThrownBy(() -> service.register(command))
+                .isInstanceOf(EmailAlreadyExistsException.class);
+    }
+
+    @Test
+    void registerPreservesUnidentifiedDuplicateKeyFailure() {
+        DuplicateKeyException duplicateKey = new DuplicateKeyException("database detail");
+        when(userRepository.existsByUsername("nini")).thenReturn(false);
+        when(userRepository.existsByEmail("nini@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("UnitTest7!")).thenReturn("bcrypt-hash");
+        when(userRepository.save(any())).thenThrow(duplicateKey);
+
+        assertThatThrownBy(() -> service.register(command))
+                .isSameAs(duplicateKey);
     }
 
     @Test

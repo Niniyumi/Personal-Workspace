@@ -22,7 +22,7 @@ class JwtTokenServiceTest {
     @Test
     void issuedTokenContainsUserIdentityAndFifteenMinuteExpiry() {
         JwtTokenService tokenService = new JwtTokenService(
-                new JwtProperties(SECRET, 15), Clock.fixed(NOW, ZoneOffset.UTC));
+                new JwtProperties(SECRET, 15, 7), Clock.fixed(NOW, ZoneOffset.UTC));
 
         Jwt jwt = decoder().decode(tokenService.issueAccessToken(activeUser(42L)));
 

@@ -6,6 +6,7 @@ import com.niniyumi.personalagent.auth.domain.UserStatus;
 import com.niniyumi.personalagent.auth.domain.RefreshSession;
 import com.niniyumi.personalagent.auth.infrastructure.security.JwtTokenService;
 import java.util.Locale;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,9 +42,19 @@ public class AuthService {
         if (userRepository.findByUsernameOrEmail(email).isPresent()) {
             throw new EmailAlreadyExistsException();
         }
-        return userRepository.save(new User(null, username, email,
-                passwordEncoder.encode(command.password()), command.displayName().trim(),
-                UserStatus.ACTIVE, null, null));
+        try {
+            return userRepository.save(new User(null, username, email,
+                    passwordEncoder.encode(command.password()), command.displayName().trim(),
+                    UserStatus.ACTIVE, null, null));
+        } catch (DuplicateKeyException exception) {
+            if (userRepository.existsByUsername(username)) {
+                throw new UsernameAlreadyExistsException();
+            }
+            if (userRepository.existsByEmail(email)) {
+                throw new EmailAlreadyExistsException();
+            }
+            throw exception;
+        }
     }
 
     public LoginResult login(LoginCommand command) {

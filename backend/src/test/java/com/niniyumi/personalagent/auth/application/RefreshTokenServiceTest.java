@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.niniyumi.personalagent.auth.domain.RefreshSession;
 import com.niniyumi.personalagent.auth.domain.RefreshSessionRepository;
+import com.niniyumi.personalagent.auth.infrastructure.security.JwtProperties;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -31,13 +32,14 @@ class RefreshTokenServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new RefreshTokenService(repository, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new RefreshTokenService(repository, Clock.fixed(NOW, ZoneOffset.UTC),
+                new JwtProperties("unused", 15, 9));
     }
 
     @Test
     void issueStoresOnlySha256HashAndReturnsOpaqueToken() {
         RefreshSession persistedSession = new RefreshSession(7L, 42L, "persisted-hash",
-                NOW.plus(7, ChronoUnit.DAYS), null, NOW);
+                NOW.plus(9, ChronoUnit.DAYS), null, NOW);
         when(repository.save(org.mockito.ArgumentMatchers.any(RefreshSession.class))).thenReturn(persistedSession);
 
         IssuedRefreshToken issued = service.issue(42L);
@@ -47,7 +49,7 @@ class RefreshTokenServiceTest {
         assertThat(issued.value()).matches("[A-Za-z0-9_-]{43}");
         assertThat(session.getValue().tokenHash()).isNotEqualTo(issued.value());
         assertThat(session.getValue().tokenHash()).matches("[0-9a-f]{64}");
-        assertThat(session.getValue().expiresAt()).isEqualTo(NOW.plus(7, ChronoUnit.DAYS));
+        assertThat(session.getValue().expiresAt()).isEqualTo(NOW.plus(9, ChronoUnit.DAYS));
         assertThat(issued.session()).isEqualTo(persistedSession);
     }
 

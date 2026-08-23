@@ -15,6 +15,8 @@ import com.niniyumi.personalagent.auth.application.RegisterCommand;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
 import com.niniyumi.personalagent.auth.domain.User;
 import com.niniyumi.personalagent.auth.domain.UserStatus;
+import com.niniyumi.personalagent.auth.infrastructure.security.JwtProperties;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -31,6 +33,14 @@ class AuthControllerTest {
 
     @MockBean
     private AuthService authService;
+
+    @MockBean
+    private JwtProperties jwtProperties;
+
+    @BeforeEach
+    void setUp() {
+        when(jwtProperties.accessTokenMinutes()).thenReturn(23L);
+    }
 
     @Test
     void registerCreatesUser() throws Exception {
@@ -96,7 +106,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
-                .andExpect(jsonPath("$.expiresInSeconds").value(900));
+                .andExpect(jsonPath("$.expiresInSeconds").value(1_380));
     }
 
     @Test

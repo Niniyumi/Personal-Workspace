@@ -1,6 +1,8 @@
 package com.niniyumi.personalagent.common.api;
 
 import com.niniyumi.personalagent.auth.application.EmailAlreadyExistsException;
+import com.niniyumi.personalagent.auth.application.CurrentUserDisabledException;
+import com.niniyumi.personalagent.auth.application.CurrentUserNotFoundException;
 import com.niniyumi.personalagent.auth.application.InvalidCredentialsException;
 import com.niniyumi.personalagent.auth.application.InvalidRefreshTokenException;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
@@ -13,6 +15,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(CurrentUserNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleCurrentUserNotFound() {
+        return error(HttpStatus.NOT_FOUND, "CURRENT_USER_NOT_FOUND", "Current user not found");
+    }
+
+    @ExceptionHandler(CurrentUserDisabledException.class)
+    public ResponseEntity<ApiErrorResponse> handleCurrentUserDisabled() {
+        return error(HttpStatus.FORBIDDEN, "CURRENT_USER_DISABLED", "Current user is disabled");
+    }
+
     @ExceptionHandler(UsernameAlreadyExistsException.class)
     public ResponseEntity<ApiErrorResponse> handleUsernameAlreadyExists() {
         return error(HttpStatus.CONFLICT, "USERNAME_EXISTS", "Username already exists");

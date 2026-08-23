@@ -5,6 +5,13 @@
 - Java 21
 - MySQL 8 running locally, with a database named `work`
 
+## Protect the existing database
+
+Before starting the application, inspect the existing `work` database for important data and
+tables with names used by this application. Back up any data you need to preserve before Flyway
+runs. The application applies migrations directly to `work`; do not continue until you are
+confident the database is safe to migrate.
+
 The application reads configuration from process environment variables. The checked-in
 `.env.example` is a reference only: `.env` is ignored by Git, and Spring Boot does not
 automatically load `.env` files. Do not commit a database password, JWT secret, user

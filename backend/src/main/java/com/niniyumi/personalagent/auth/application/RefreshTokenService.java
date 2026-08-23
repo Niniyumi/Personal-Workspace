@@ -2,6 +2,7 @@ package com.niniyumi.personalagent.auth.application;
 
 import com.niniyumi.personalagent.auth.domain.RefreshSession;
 import com.niniyumi.personalagent.auth.domain.RefreshSessionRepository;
+import com.niniyumi.personalagent.auth.infrastructure.security.JwtProperties;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -19,10 +20,12 @@ public class RefreshTokenService {
 
     private final RefreshSessionRepository repository;
     private final Clock clock;
+    private final JwtProperties properties;
 
-    public RefreshTokenService(RefreshSessionRepository repository, Clock clock) {
+    public RefreshTokenService(RefreshSessionRepository repository, Clock clock, JwtProperties properties) {
         this.repository = repository;
         this.clock = clock;
+        this.properties = properties;
     }
 
     public IssuedRefreshToken issue(long userId) {
@@ -30,7 +33,8 @@ public class RefreshTokenService {
         SECURE_RANDOM.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         Instant now = clock.instant();
-        RefreshSession session = new RefreshSession(null, userId, hash(token), now.plus(7, ChronoUnit.DAYS), null, now);
+        RefreshSession session = new RefreshSession(null, userId, hash(token),
+                now.plus(properties.refreshTokenDays(), ChronoUnit.DAYS), null, now);
         return new IssuedRefreshToken(token, repository.save(session));
     }
 

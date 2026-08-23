@@ -10,6 +10,7 @@ import com.niniyumi.personalagent.auth.application.RegisterCommand;
 import com.niniyumi.personalagent.auth.application.LoginCommand;
 import com.niniyumi.personalagent.auth.application.LoginResult;
 import com.niniyumi.personalagent.auth.domain.User;
+import com.niniyumi.personalagent.auth.infrastructure.security.JwtProperties;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService authService;
+    private final JwtProperties jwtProperties;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, JwtProperties jwtProperties) {
         this.authService = authService;
+        this.jwtProperties = jwtProperties;
     }
 
     @PostMapping("/register")
@@ -52,6 +55,7 @@ public class AuthController {
     }
 
     private AuthTokensResponse tokens(LoginResult result) {
-        return new AuthTokensResponse(result.accessToken(), result.refreshToken(), "Bearer", 900);
+        return new AuthTokensResponse(result.accessToken(), result.refreshToken(), "Bearer",
+                Math.multiplyExact(jwtProperties.accessTokenMinutes(), 60L));
     }
 }

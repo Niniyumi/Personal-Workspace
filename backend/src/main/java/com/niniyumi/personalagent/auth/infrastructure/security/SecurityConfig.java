@@ -1,6 +1,5 @@
 package com.niniyumi.personalagent.auth.infrastructure.security;
 
-import com.nimbusds.jose.proc.SecurityContext;
 import java.time.Clock;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -40,7 +39,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, ApiSecurityErrorHandler errorHandler) throws Exception {
         Converter<Jwt, AbstractAuthenticationToken> converter = jwt ->
                 new UsernamePasswordAuthenticationToken(
                         new AuthenticatedUser(Long.parseLong(jwt.getSubject()), jwt.getClaimAsString("username")),
@@ -51,7 +50,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(errorHandler)
+                        .accessDeniedHandler(errorHandler))
+                .oauth2ResourceServer(oauth -> oauth
+                        .authenticationEntryPoint(errorHandler)
+                        .accessDeniedHandler(errorHandler)
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(converter)))
                 .build();
     }
 }

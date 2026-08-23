@@ -3,6 +3,7 @@ package com.niniyumi.personalagent.auth.api;
 import com.niniyumi.personalagent.auth.api.dto.UserResponse;
 import com.niniyumi.personalagent.auth.domain.User;
 import com.niniyumi.personalagent.auth.domain.UserRepository;
+import com.niniyumi.personalagent.auth.domain.UserStatus;
 import com.niniyumi.personalagent.auth.infrastructure.security.AuthenticatedUser;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +25,9 @@ public class CurrentUserController {
     public UserResponse currentUser(@AuthenticationPrincipal AuthenticatedUser authenticatedUser) {
         User user = userRepository.findById(authenticatedUser.userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (user.status() != UserStatus.ACTIVE) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
         return new UserResponse(user.id(), user.username(), user.email(), user.displayName());
     }
 }

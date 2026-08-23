@@ -48,8 +48,23 @@ class CurrentUserControllerTest {
                 .andExpect(jsonPath("$.username").value("nini"));
     }
 
+    @Test
+    void currentUserRejectsDisabledUser() throws Exception {
+        when(userRepository.findById(42L)).thenReturn(Optional.of(disabledUser()));
+
+        mockMvc.perform(get("/api/users/me")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                new AuthenticatedUser(42L, "nini"), "token", List.of()))))
+                .andExpect(status().isForbidden());
+    }
+
     private User user() {
         return new User(42L, "nini", "nini@example.com", "bcrypt-hash", "Nini",
                 UserStatus.ACTIVE, null, null);
+    }
+
+    private User disabledUser() {
+        return new User(42L, "nini", "nini@example.com", "bcrypt-hash", "Nini",
+                UserStatus.DISABLED, null, null);
     }
 }

@@ -41,3 +41,27 @@ npm run build
 | B07 | 375px 左右窄屏查看登录和工作台 | 表单单列显示，无横向滚动，主要按钮可点击 |
 
 测试账号只用于本地数据库，不写入源码、文档或 Git 历史。
+
+## 2026-08-24 前后端联调记录
+
+运行环境：
+
+- Java 21.0.11
+- Spring Boot 3.5.16，端口 `8080`
+- MySQL 8.0，数据库 `work`
+- Flyway schema version 1
+- Vite 8.2.2，端口 `5174`
+
+验证结果：
+
+| 场景 | 访问路径 | 结果 |
+|---|---|---|
+| 注册唯一测试用户 | Vite `/api/auth/register` 代理 | 201，返回用户 ID |
+| 使用用户名登录 | Vite `/api/auth/login` 代理 | 200，随后 `/api/users/me` 返回当前用户 |
+| 刷新令牌轮换 | Vite `/api/auth/refresh` 代理 | 200，返回新令牌对 |
+| 退出登录 | Vite `/api/auth/logout` 代理 | 204 |
+| 重用已退出的刷新令牌 | Vite `/api/auth/refresh` 代理 | 401 |
+| 使用邮箱登录 | Vite `/api/auth/login` 代理 | 200，当前用户与用户名登录一致 |
+| 邮箱登录后退出 | Vite `/api/auth/logout` 代理 | 204 |
+
+自动化验证：后端 45 个测试通过；前端 5 个测试文件、23 个测试通过；Vite 生产构建通过。联调过程未把测试密码、访问令牌或刷新令牌写入文档和 Git。

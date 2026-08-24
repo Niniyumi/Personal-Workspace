@@ -2,7 +2,6 @@ import { createRouter, createWebHistory, type RouterHistory } from 'vue-router'
 import { useAuthStore } from '../features/auth/authStore'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
-import PreviewView from '../views/PreviewView.vue'
 import RegisterView from '../views/RegisterView.vue'
 
 export function createAppRouter(history: RouterHistory = createWebHistory()) {
@@ -14,11 +13,6 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
         name: 'home',
         component: HomeView,
         meta: { requiresAuth: true },
-      },
-      {
-        path: '/preview',
-        name: 'preview',
-        component: PreviewView,
       },
       {
         path: '/login',

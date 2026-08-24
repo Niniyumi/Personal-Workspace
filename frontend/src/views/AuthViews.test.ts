@@ -105,8 +105,10 @@ describe('HomeView', () => {
     mocks.logout.mockResolvedValue(undefined)
     const wrapper = mount(HomeView, { global })
 
+    expect(wrapper.text()).toContain('今天想整理些什么？')
     expect(wrapper.text()).toContain('Nini')
     expect(wrapper.text()).toContain('nini@example.com')
+    expect(wrapper.text()).not.toContain('静态预览模式')
     await wrapper.get('[data-test="logout"]').trigger('click')
     await flushPromises()
 

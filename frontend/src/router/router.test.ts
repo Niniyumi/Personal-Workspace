@@ -45,16 +45,14 @@ describe('authentication router guard', () => {
     expect(router.currentRoute.value.name).toBe('home')
   })
 
-  it('allows an anonymous user to open the static preview', async () => {
+  it('does not expose the temporary static preview route', async () => {
     const store = useAuthStore()
-    vi.spyOn(store, 'restoreSession').mockImplementation(async () => {
-      store.status = 'anonymous'
-    })
+    store.status = 'authenticated'
     const router = createAppRouter(createMemoryHistory())
 
     await router.push('/preview')
 
-    expect(router.currentRoute.value.name).toBe('preview')
+    expect(router.currentRoute.value.path).toBe('/')
   })
 
   it('redirects an unknown URL to home', async () => {

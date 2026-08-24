@@ -10,6 +10,10 @@ import com.niniyumi.personalagent.weeklyreport.application.InvalidWeekStartExcep
 import com.niniyumi.personalagent.weeklyreport.application.InvalidDocxException;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAlreadyExistsException;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportNotFoundException;
+import com.niniyumi.personalagent.weeklyreport.application.NoWeeklyReportsForPeriodException;
+import com.niniyumi.personalagent.weeklyreport.application.SummaryGenerationException;
+import com.niniyumi.personalagent.weeklyreport.application.WorkSummaryNotFoundException;
+import com.niniyumi.personalagent.weeklyreport.application.InvalidSummaryPeriodException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -73,6 +77,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleOversizedUpload() {
         return error(HttpStatus.BAD_REQUEST, "INVALID_DOCX", "Invalid DOCX file");
+    }
+
+    @ExceptionHandler(NoWeeklyReportsForPeriodException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoWeeklyReportsForPeriod() {
+        return error(HttpStatus.CONFLICT, "NO_WEEKLY_REPORTS_FOR_PERIOD", "No weekly reports for period");
+    }
+
+    @ExceptionHandler(WorkSummaryNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleWorkSummaryNotFound() {
+        return error(HttpStatus.NOT_FOUND, "WORK_SUMMARY_NOT_FOUND", "Work summary not found");
+    }
+
+    @ExceptionHandler(SummaryGenerationException.class)
+    public ResponseEntity<ApiErrorResponse> handleSummaryGenerationFailure() {
+        return error(HttpStatus.BAD_GATEWAY, "SUMMARY_GENERATION_FAILED", "Summary generation failed");
+    }
+
+    @ExceptionHandler(InvalidSummaryPeriodException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidSummaryPeriod() {
+        return error(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Validation failed");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

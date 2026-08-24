@@ -1,22 +1,21 @@
 # Personal Workspace
 
-A personal AI agent for course transcription, structured notes, and conversational weekly reports.
+A lightweight personal AI agent for structured weekly reports and work summaries.
 
 ## Project Status
 
-The authentication backend and Vue web interface are implemented. The current increment
-provides registration, login, session restoration, refresh-token rotation, logout,
-route protection, and a responsive personal workspace.
+Registration/login, the Vue workspace, structured weekly reports, DOCX text extraction,
+and quarterly/yearly work summaries are implemented.
 
 ## First-Phase Scope
 
 - Multi-user registration and login
 - Agent-centered web interface
-- Up to two hours of browser course recording
-- Asynchronous speech transcription and structured course notes
-- Conversational weekly-report material collection with optional DOCX files
-- On-demand weekly-report generation, editing, storage, and DOCX export
-- Configurable chat and speech-to-text providers
+- Three-field weekly-report creation and editing
+- Year/month report history and detail view
+- DOCX extraction with configurable AI classification
+- Quarterly/yearly summaries with editable 0–100 score
+- One configurable OpenAI-compatible chat provider
 
 ## Architecture
 
@@ -24,10 +23,7 @@ route protection, and a responsive personal workspace.
 - Vue 3, TypeScript, and Vite
 - MySQL 8 with Flyway
 - MyBatis-Plus
-- MinIO object storage
-- Server-Sent Events for task progress
-
-Redis, RabbitMQ, microservices, vector databases, Feishu integration, and the literature assistant are intentionally excluded from the first phase.
+Course recording, Redis, queues, object storage, Feishu integration, and the literature assistant are later phases.
 
 ## Documentation
 
@@ -36,6 +32,7 @@ Redis, RabbitMQ, microservices, vector databases, Feishu integration, and the li
 - [Local development setup](docs/development/local-setup.md)
 - [Frontend setup](frontend/README.md)
 - [Login test cases](docs/testing/login-ui-test-cases.md)
+- [Weekly report test cases](docs/testing/weekly-report-test-cases.md)
 - [Daily progress](docs/progress/README.md)
 
 ## License

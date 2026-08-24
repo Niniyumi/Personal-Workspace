@@ -36,6 +36,9 @@ Set-Location backend
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local" "-Dspring-boot.run.arguments=--spring.config.additional-location=file:./src/main/resources/application-local.yml"
 ```
 
+`app.security.jwt-secret` must contain at least 32 ASCII characters. A shorter value allows
+registration but makes JWT issuance fail during login.
+
 The file is intentionally excluded from Maven resources, so it cannot enter the WAR. The variables apply only to the current PowerShell process. Keep the terminal open while the
 application runs. On a successful start, Flyway reports schema version `2` and Spring
 Boot listens on port `8080`.

@@ -44,6 +44,19 @@ Set-Location backend
 
 The command must finish with zero failures and exit code `0`.
 
+## Build the deployable website
+
+The production WAR contains both the Vue page and Spring Boot backend:
+
+```powershell
+Set-Location frontend
+npm run build
+Set-Location ../backend
+.\mvnw.cmd clean package
+```
+
+The result is `backend/target/personal-agent.war`. Local and secret configuration files are excluded from this artifact. For the IDEA server configuration and deployment flow, see [IDEA + Tomcat 本地部署](idea-tomcat.md).
+
 ## Authentication smoke-test flow
 
 With the backend running, use a second PowerShell terminal. Choose a unique username and

@@ -11,6 +11,7 @@
 	<groupId>com.niniyumi</groupId>
 	<artifactId>personal-agent-backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
 	<name>PersonalAgent</name>
 	<description>Personal AI Agent</description>
 	<url/>
@@ -34,6 +35,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -79,10 +85,33 @@
 	</dependencies>
 
 	<build>
+		<finalName>personal-agent</finalName>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<!-- 本机数据库和密钥配置只用于本地运行，禁止进入可分发的 WAR。 -->
+				<excludes>
+					<exclude>application-local.yml</exclude>
+					<exclude>application-secret.yml</exclude>
+				</excludes>
+			</resource>
+		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+					<!-- 前端构建由 npm 负责，Maven 只把现有 dist 产物打入 WAR。 -->
+					<webResources>
+						<resource>
+							<directory>../frontend/dist</directory>
+						</resource>
+					</webResources>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

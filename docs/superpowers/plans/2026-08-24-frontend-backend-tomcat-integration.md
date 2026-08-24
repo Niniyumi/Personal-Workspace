@@ -280,7 +280,7 @@ git commit -m "docs: record frontend backend integration verification"
 - Modify: `backend/src/main/java/com/niniyumi/personalagent/auth/infrastructure/security/SecurityConfig.java`
 - Create: `backend/src/main/java/com/niniyumi/personalagent/common/web/SpaForwardController.java`
 - Create: `backend/src/test/java/com/niniyumi/personalagent/common/web/SpaForwardControllerTest.java`
-- Create: `backend/src/test/java/com/niniyumi/personalagent/WarPackagingContractTest.java`
+- Create: `backend/src/test/java/com/niniyumi/personalagent/common/web/SpaSecurityTest.java`
 - Create: `docs/development/idea-tomcat.md`
 - Modify: `docs/development/local-setup.md`
 
@@ -288,23 +288,17 @@ git commit -m "docs: record frontend backend integration verification"
 - Consumes: `frontend/dist/index.html`, Spring Boot MVC, and the existing `/api/**` security chain.
 - Produces: `backend/target/personal-agent.war`, explicit SPA route forwarding, and reproducible IDEA Tomcat setup instructions.
 
-- [ ] **Step 1: Write failing WAR packaging contract tests**
+- [ ] **Step 1: Write the failing traditional-deployment test**
 
-Create `WarPackagingContractTest` that reads `pom.xml` and verifies the required packaging contract:
+Update `PersonalAgentApplicationTests` to verify the application can be initialized by an external servlet container:
 
 ```java
 @Test
-void pomBuildsDeployableWarWithFrontendResources() throws IOException {
-    String pom = Files.readString(Path.of("pom.xml"));
-assertThat(pom).contains("<packaging>war</packaging>")
-            .contains("<artifactId>spring-boot-starter-tomcat</artifactId>")
-            .contains("<scope>provided</scope>")
-            .contains("<finalName>personal-agent</finalName>")
-            .contains("../frontend/dist");
+void applicationSupportsTraditionalWarDeployment() {
+    assertThat(SpringBootServletInitializer.class)
+            .isAssignableFrom(PersonalAgentApplication.class);
 }
 ```
-
-Update `PersonalAgentApplicationTests` or add a reflection assertion that `PersonalAgentApplication` extends `SpringBootServletInitializer`.
 
 - [ ] **Step 2: Write a failing SPA forwarding controller test**
 
@@ -326,7 +320,7 @@ Run:
 
 ```powershell
 cd backend
-./mvnw.cmd -Dtest=WarPackagingContractTest,SpaForwardControllerTest,PersonalAgentApplicationTests test
+./mvnw.cmd -Dtest=SpaForwardControllerTest,PersonalAgentApplicationTests test
 ```
 
 Expected: FAIL because WAR packaging, the initializer base class, and the forwarding controller are missing.
@@ -366,6 +360,8 @@ Set the stable artifact name under `<build>` and configure `maven-war-plugin` to
     </configuration>
 </plugin>
 ```
+
+Also exclude `application-local.yml` and `application-secret.yml` from Maven resources so ignored local credentials cannot enter the WAR.
 
 Update the application class:
 
@@ -419,7 +415,7 @@ Only the HTML/static routes are public; weekly-report and summary APIs remain pr
 Run:
 
 ```powershell
-./mvnw.cmd -Dtest=WarPackagingContractTest,SpaForwardControllerTest,PersonalAgentApplicationTests test
+./mvnw.cmd -Dtest=SpaForwardControllerTest,PersonalAgentApplicationTests test
 ./mvnw.cmd test
 ```
 
@@ -474,7 +470,7 @@ If local Tomcat is not installed yet, record that only the WAR-content and execu
 - [ ] **Step 12: Commit the WAR and Tomcat work**
 
 ```powershell
-git add backend/pom.xml backend/src/main/java/com/niniyumi/personalagent/PersonalAgentApplication.java backend/src/main/java/com/niniyumi/personalagent/auth/infrastructure/security/SecurityConfig.java backend/src/main/java/com/niniyumi/personalagent/common/web/SpaForwardController.java backend/src/test/java/com/niniyumi/personalagent/common/web/SpaForwardControllerTest.java backend/src/test/java/com/niniyumi/personalagent/WarPackagingContractTest.java docs/development/idea-tomcat.md docs/development/local-setup.md
+git add backend/pom.xml backend/src/main/java/com/niniyumi/personalagent/PersonalAgentApplication.java backend/src/main/java/com/niniyumi/personalagent/auth/infrastructure/security/SecurityConfig.java backend/src/main/java/com/niniyumi/personalagent/common/web/SpaForwardController.java backend/src/test/java/com/niniyumi/personalagent/common/web/SpaForwardControllerTest.java backend/src/test/java/com/niniyumi/personalagent/common/web/SpaSecurityTest.java backend/src/test/java/com/niniyumi/personalagent/PersonalAgentApplicationTests.java docs/development/idea-tomcat.md docs/development/local-setup.md docs/superpowers/plans/2026-08-24-frontend-backend-tomcat-integration.md
 git commit -m "build: support idea tomcat war deployment"
 ```
 

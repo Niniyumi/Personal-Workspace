@@ -6,6 +6,9 @@ import com.niniyumi.personalagent.auth.application.CurrentUserNotFoundException;
 import com.niniyumi.personalagent.auth.application.InvalidCredentialsException;
 import com.niniyumi.personalagent.auth.application.InvalidRefreshTokenException;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
+import com.niniyumi.personalagent.weeklyreport.application.InvalidWeekStartException;
+import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAlreadyExistsException;
+import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportNotFoundException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +46,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidRefreshTokenException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidRefreshToken() {
         return error(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", "Invalid refresh token");
+    }
+
+    @ExceptionHandler(WeeklyReportNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleWeeklyReportNotFound() {
+        return error(HttpStatus.NOT_FOUND, "WEEKLY_REPORT_NOT_FOUND", "Weekly report not found");
+    }
+
+    @ExceptionHandler(WeeklyReportAlreadyExistsException.class)
+    public ResponseEntity<ApiErrorResponse> handleWeeklyReportAlreadyExists() {
+        return error(HttpStatus.CONFLICT, "WEEKLY_REPORT_EXISTS", "Weekly report already exists");
+    }
+
+    @ExceptionHandler(InvalidWeekStartException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidWeekStart() {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_WEEK_START", "Week must start on Monday");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

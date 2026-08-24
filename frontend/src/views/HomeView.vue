@@ -30,6 +30,10 @@ async function logout() {
   await store.logout()
   await router.push({ name: 'login' })
 }
+
+function openWeeklyReports() {
+  void router.push({ name: 'weekly-reports' })
+}
 </script>
 
 <template>
@@ -39,7 +43,7 @@ async function logout() {
         <div class="workspace-brand"><span class="workspace-logo">P</span><span>Personal Agent</span></div>
         <nav aria-label="主要导航">
           <a class="workspace-nav active" href="#workspace"><ElIcon><HomeFilled /></ElIcon><span>工作台</span></a>
-          <a class="workspace-nav" href="#weekly"><ElIcon><ChatDotRound /></ElIcon><span>周报助手</span></a>
+          <button class="workspace-nav nav-button" type="button" @click="openWeeklyReports"><ElIcon><ChatDotRound /></ElIcon><span>周报助手</span></button>
           <a class="workspace-nav" href="#course"><ElIcon><Mic /></ElIcon><span>课程笔记</span></a>
           <a class="workspace-nav" href="#archive"><ElIcon><FolderOpened /></ElIcon><span>资料归档</span></a>
         </nav>
@@ -101,7 +105,7 @@ async function logout() {
             <span class="card-index">02 / WEEKLY REPORT</span>
             <h3>结构化周报</h3>
             <p>填写核心工作、遇到的问题和下周计划，再按月份查询历史记录。</p>
-            <ElButton round disabled>即将开始</ElButton>
+            <ElButton data-test="open-weekly-reports" round @click="openWeeklyReports">开始填写</ElButton>
           </article>
 
           <article id="course" class="feature-card">
@@ -167,6 +171,7 @@ async function logout() {
 .workspace-logo { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 14px; background: #ffd84d; font-weight: 900; }
 .workspace-sidebar nav { display: grid; gap: 8px; margin-top: 54px; }
 .workspace-nav { display: flex; min-height: 48px; align-items: center; gap: 12px; padding: 0 16px; border-radius: 18px; color: #66645f; font-size: 14px; text-decoration: none; }
+.nav-button { width: 100%; border: 0; background: transparent; cursor: pointer; }
 .workspace-nav.active { color: #17181c; background: #e7e3dc; font-weight: 750; }
 .sidebar-spacer { flex: 1; }
 .workspace-profile { display: flex; align-items: center; gap: 10px; }

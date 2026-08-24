@@ -3,6 +3,8 @@ import { useAuthStore } from '../features/auth/authStore'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
+import WeeklyReportDetailView from '../views/WeeklyReportDetailView.vue'
+import WeeklyReportsView from '../views/WeeklyReportsView.vue'
 
 export function createAppRouter(history: RouterHistory = createWebHistory()) {
   const router = createRouter({
@@ -25,6 +27,18 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
         name: 'register',
         component: RegisterView,
         meta: { guestOnly: true },
+      },
+      {
+        path: '/weekly-reports',
+        name: 'weekly-reports',
+        component: WeeklyReportsView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/weekly-reports/:id',
+        name: 'weekly-report-detail',
+        component: WeeklyReportDetailView,
+        meta: { requiresAuth: true },
       },
       { path: '/:pathMatch(.*)*', redirect: '/' },
     ],

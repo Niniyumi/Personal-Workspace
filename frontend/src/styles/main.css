@@ -1,18 +1,18 @@
 :root {
   font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  color: #134e4a;
-  background: #f0fdfa;
+  color: #17181c;
+  background: #d8d5cf;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --color-primary: #0f766e;
-  --color-primary-hover: #115e59;
-  --color-background: #f0fdfa;
+  --color-primary: #17181c;
+  --color-primary-hover: #f05a18;
+  --color-background: #f6f3ed;
   --color-surface: #ffffff;
-  --color-text: #134e4a;
-  --color-muted: #475569;
-  --color-border: #99f6e4;
+  --color-text: #17181c;
+  --color-muted: #77736c;
+  --color-border: #ded9d0;
   --color-danger: #b91c1c;
-  --color-focus: #0d9488;
+  --color-focus: #f05a18;
 }
 
 * {

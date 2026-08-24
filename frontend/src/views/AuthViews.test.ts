@@ -115,4 +115,12 @@ describe('HomeView', () => {
     expect(mocks.logout).toHaveBeenCalledOnce()
     expect(mocks.push).toHaveBeenCalledWith({ name: 'login' })
   })
+
+  it('opens the weekly report workspace', async () => {
+    const wrapper = mount(HomeView, { global })
+
+    await wrapper.get('[data-test="open-weekly-reports"]').trigger('click')
+
+    expect(mocks.push).toHaveBeenCalledWith({ name: 'weekly-reports' })
+  })
 })

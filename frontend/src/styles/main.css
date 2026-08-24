@@ -42,7 +42,7 @@ a {
 
 .auth-form {
   display: grid;
-  gap: 20px;
+  gap: 22px;
 }
 
 .field-row {
@@ -53,31 +53,54 @@ a {
 
 .field {
   display: grid;
-  gap: 8px;
+  gap: 9px;
 }
 
 .field label {
-  color: #1e293b;
-  font-size: 14px;
-  font-weight: 700;
+  color: #2f2e2b;
+  font-size: 13px;
+  font-weight: 750;
 }
 
-.field input {
+.field > input {
   width: 100%;
-  min-height: 48px;
-  padding: 0 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  color: #0f172a;
-  background: #fff;
+  min-height: 52px;
+  padding: 0 17px;
+  border: 1px solid #ded9d0;
+  border-radius: 17px;
+  color: #17181c;
+  background: #f3f0ea;
 }
 
-.field input:hover {
-  border-color: #94a3b8;
+.field > input:hover {
+  border-color: #bcb6ac;
 }
 
-.field input::placeholder {
-  color: #94a3b8;
+.field > input::placeholder {
+  color: #99958d;
+}
+
+.field .el-input {
+  --el-input-height: 52px;
+}
+
+.field .el-input__wrapper {
+  padding: 0 17px;
+  border-radius: 17px;
+  background: #f3f0ea;
+  box-shadow: 0 0 0 1px #ded9d0 inset;
+}
+
+.field .el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px #bcb6ac inset;
+}
+
+.field .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 2px #f05a18 inset;
+}
+
+.field .el-input__inner {
+  color: #17181c;
 }
 
 .field small {
@@ -87,13 +110,28 @@ a {
 }
 
 .primary-button {
-  min-height: 48px;
+  width: 100%;
+  min-height: 54px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 27px;
   color: #fff;
   background: var(--color-primary);
   font-weight: 750;
   cursor: pointer;
+}
+
+.primary-button.el-button {
+  --el-button-bg-color: #17181c;
+  --el-button-border-color: #17181c;
+  --el-button-hover-bg-color: #34353a;
+  --el-button-hover-border-color: #34353a;
+  --el-button-active-bg-color: #000;
+  --el-button-active-border-color: #000;
+  --el-button-text-color: #fff;
+}
+
+.primary-button.el-button.is-round {
+  border-radius: 27px;
 }
 
 .primary-button:hover:not(:disabled) {
@@ -108,8 +146,8 @@ a {
 .form-error,
 .notice {
   margin: 0;
-  padding: 11px 13px;
-  border-radius: 8px;
+  padding: 12px 15px;
+  border-radius: 14px;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -121,8 +159,8 @@ a {
 
 .notice {
   margin-bottom: 18px;
-  color: #166534;
-  background: #f0fdf4;
+  color: #6b3b07;
+  background: #fff4ce;
 }
 
 .auth-switch {
@@ -133,7 +171,7 @@ a {
 }
 
 .auth-switch a {
-  color: var(--color-primary);
+  color: #e84f12;
   font-weight: 700;
   text-decoration: none;
 }

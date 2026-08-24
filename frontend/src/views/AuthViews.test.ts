@@ -48,6 +48,7 @@ describe('LoginView', () => {
   it('submits username or email and password then navigates home', async () => {
     mocks.login.mockResolvedValue(undefined)
     const wrapper = mount(LoginView, { global })
+    await flushPromises()
 
     expect(wrapper.find('label[for="login"]').text()).toContain('用户名或邮箱')
     expect(wrapper.find('label[for="password"]').text()).toContain('密码')

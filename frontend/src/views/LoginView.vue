@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Lock, User } from '@element-plus/icons-vue'
+import { ElButton, ElInput } from 'element-plus'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AuthShell from '../components/AuthShell.vue'
@@ -29,12 +31,14 @@ async function submit() {
     <form class="auth-form" @submit.prevent="submit">
       <div class="field">
         <label for="login">用户名或邮箱</label>
-        <input
+        <ElInput
           id="login"
           v-model.trim="login"
+          size="large"
           name="login"
           type="text"
           autocomplete="username"
+          :prefix-icon="User"
           placeholder="例如 nini 或 nini@example.com"
           required
           autofocus
@@ -42,20 +46,23 @@ async function submit() {
       </div>
       <div class="field">
         <label for="password">密码</label>
-        <input
+        <ElInput
           id="password"
           v-model="password"
+          size="large"
           name="password"
           type="password"
           autocomplete="current-password"
+          :prefix-icon="Lock"
           placeholder="输入你的密码"
+          show-password
           required
         />
       </div>
       <p v-if="store.error" class="form-error" role="alert">{{ store.error }}</p>
-      <button class="primary-button" type="submit" :disabled="pending">
-        {{ pending ? '正在登录…' : '登录' }}
-      </button>
+      <ElButton class="primary-button" size="large" round native-type="submit" :loading="pending" :disabled="pending">
+        {{ pending ? '正在登录…' : '登录并进入工作台' }}
+      </ElButton>
     </form>
     <p class="auth-switch">还没有账号？<RouterLink to="/register">创建账号</RouterLink></p>
   </AuthShell>

@@ -5,6 +5,7 @@ import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import WeeklyReportDetailView from '../views/WeeklyReportDetailView.vue'
 import WeeklyReportsView from '../views/WeeklyReportsView.vue'
+import WorkSummariesView from '../views/WorkSummariesView.vue'
 
 export function createAppRouter(history: RouterHistory = createWebHistory()) {
   const router = createRouter({
@@ -38,6 +39,12 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
         path: '/weekly-reports/:id',
         name: 'weekly-report-detail',
         component: WeeklyReportDetailView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/work-summaries',
+        name: 'work-summaries',
+        component: WorkSummariesView,
         meta: { requiresAuth: true },
       },
       { path: '/:pathMatch(.*)*', redirect: '/' },

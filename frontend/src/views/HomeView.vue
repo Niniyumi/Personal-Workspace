@@ -34,6 +34,10 @@ async function logout() {
 function openWeeklyReports() {
   void router.push({ name: 'weekly-reports' })
 }
+
+function openWorkSummaries() {
+  void router.push({ name: 'work-summaries' })
+}
 </script>
 
 <template>
@@ -105,7 +109,10 @@ function openWeeklyReports() {
             <span class="card-index">02 / WEEKLY REPORT</span>
             <h3>结构化周报</h3>
             <p>填写核心工作、遇到的问题和下周计划，再按月份查询历史记录。</p>
-            <ElButton data-test="open-weekly-reports" round @click="openWeeklyReports">开始填写</ElButton>
+            <div class="feature-actions">
+              <ElButton data-test="open-weekly-reports" round @click="openWeeklyReports">开始填写</ElButton>
+              <ElButton data-test="open-work-summaries" round @click="openWorkSummaries">工作总结</ElButton>
+            </div>
           </article>
 
           <article id="course" class="feature-card">
@@ -222,6 +229,8 @@ function openWeeklyReports() {
 .feature-card h3 { margin: 8px 0 0; font-size: 24px; }
 .feature-card p { min-height: 66px; margin: 12px 0 18px; color: #74716a; font-size: 13px; line-height: 1.7; }
 .feature-card :deep(.el-button) { min-height: 42px; }
+.feature-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.feature-actions :deep(.el-button) { margin: 0; }
 
 .recent-card { grid-column: span 4; padding: 26px; border-radius: 26px; }
 .recent-heading span { color: #f05a18; font-size: 10px; font-weight: 800; letter-spacing: .12em; }

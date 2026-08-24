@@ -77,4 +77,17 @@ describe('authentication router guard', () => {
     expect(router.currentRoute.value.name).toBe('login')
     expect(router.currentRoute.value.query.redirect).toBe('/weekly-reports/42')
   })
+
+  it('protects the work summary route', async () => {
+    const store = useAuthStore()
+    vi.spyOn(store, 'restoreSession').mockImplementation(async () => {
+      store.status = 'anonymous'
+    })
+    const router = createAppRouter(createMemoryHistory())
+
+    await router.push('/work-summaries')
+
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/work-summaries')
+  })
 })

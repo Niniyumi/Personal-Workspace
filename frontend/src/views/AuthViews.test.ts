@@ -123,4 +123,12 @@ describe('HomeView', () => {
 
     expect(mocks.push).toHaveBeenCalledWith({ name: 'weekly-reports' })
   })
+
+  it('opens the quarterly and yearly summaries', async () => {
+    const wrapper = mount(HomeView, { global })
+
+    await wrapper.get('[data-test="open-work-summaries"]').trigger('click')
+
+    expect(mocks.push).toHaveBeenCalledWith({ name: 'work-summaries' })
+  })
 })

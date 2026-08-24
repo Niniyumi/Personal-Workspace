@@ -7,6 +7,7 @@ import com.niniyumi.personalagent.auth.application.InvalidCredentialsException;
 import com.niniyumi.personalagent.auth.application.InvalidRefreshTokenException;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
 import com.niniyumi.personalagent.weeklyreport.application.InvalidWeekStartException;
+import com.niniyumi.personalagent.weeklyreport.application.InvalidDocxException;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAlreadyExistsException;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportNotFoundException;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -61,6 +63,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidWeekStartException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidWeekStart() {
         return error(HttpStatus.BAD_REQUEST, "INVALID_WEEK_START", "Week must start on Monday");
+    }
+
+    @ExceptionHandler(InvalidDocxException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidDocx() {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_DOCX", "Invalid DOCX file");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleOversizedUpload() {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_DOCX", "Invalid DOCX file");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -35,6 +35,10 @@ DB_URL=jdbc:mysql://127.0.0.1:3306/work?useUnicode=true&characterEncoding=utf8&s
 DB_USERNAME=root
 DB_PASSWORD=<你的本机 MySQL 密码>
 JWT_SECRET=<至少 32 字节的随机密钥>
+AI_BASE_URL=<可选，OpenAI 兼容接口地址>
+AI_API_KEY=<可选，模型密钥>
+AI_MODEL=<可选，模型名称>
+AI_TIMEOUT_SECONDS=30
 ```
 
 不要把真实密码或 JWT 密钥写进 Git 文件。可以在 PowerShell 中生成 JWT 密钥：

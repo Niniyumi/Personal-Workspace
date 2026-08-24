@@ -3,8 +3,10 @@ package com.niniyumi.personalagent.weeklyreport.api;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -15,11 +17,15 @@ import com.niniyumi.personalagent.auth.infrastructure.security.AuthenticatedUser
 import com.niniyumi.personalagent.auth.infrastructure.security.SecurityConfig;
 import com.niniyumi.personalagent.common.api.GlobalExceptionHandler;
 import com.niniyumi.personalagent.weeklyreport.application.InvalidWeekStartException;
+import com.niniyumi.personalagent.weeklyreport.application.DocumentClassification;
+import com.niniyumi.personalagent.weeklyreport.application.InvalidDocxException;
 import com.niniyumi.personalagent.weeklyreport.application.SaveWeeklyReportCommand;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAlreadyExistsException;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportNotFoundException;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportService;
 import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReport;
+import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAiService;
+import com.niniyumi.personalagent.weeklyreport.infrastructure.document.DocxTextExtractor;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -31,6 +37,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 
 @WebMvcTest(value = WeeklyReportController.class,
         properties = "app.security.jwt-secret=test-jwt-secret-for-webmvc-tests-01")
@@ -41,6 +48,12 @@ class WeeklyReportControllerTest {
 
     @MockBean
     private WeeklyReportService service;
+
+    @MockBean
+    private DocxTextExtractor extractor;
+
+    @MockBean
+    private WeeklyReportAiService aiService;
 
     @Test
     void createReturnsTheOwnedReport() throws Exception {
@@ -105,6 +118,38 @@ class WeeklyReportControllerTest {
         mockMvc.perform(get("/api/weekly-reports?year=2026&month=8"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void importDocxClassifiesTextWithoutSavingAReport() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "week-34.docx", "application/octet-stream", "docx".getBytes());
+        when(extractor.extract(any())).thenReturn("原始周报文字");
+        when(aiService.classifyDocument("原始周报文字"))
+                .thenReturn(new DocumentClassification("完成登录", "接口超时", "开发周报"));
+
+        mockMvc.perform(multipart("/api/weekly-reports/import-docx")
+                        .file(file)
+                        .with(authentication(principalAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coreWork").value("完成登录"))
+                .andExpect(jsonPath("$.problems").value("接口超时"))
+                .andExpect(jsonPath("$.nextWeekPlan").value("开发周报"))
+                .andExpect(jsonPath("$.sourceFileName").value("week-34.docx"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void invalidDocxReturnsAStableError() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "broken.docx", "application/octet-stream", "broken".getBytes());
+        when(extractor.extract(any())).thenThrow(new InvalidDocxException());
+
+        mockMvc.perform(multipart("/api/weekly-reports/import-docx")
+                        .file(file)
+                        .with(authentication(principalAuthentication())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_DOCX"));
     }
 
     @Test

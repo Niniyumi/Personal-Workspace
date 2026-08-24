@@ -52,7 +52,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Vue 页面和静态资源由浏览器路由守卫控制展示，所有 /api 业务接口仍由 JWT 保护。
                         .requestMatchers("/", "/index.html", "/favicon.svg", "/assets/**",
-                                "/login", "/register", "/weekly-reports/**", "/work-summaries").permitAll()
+                                "/login", "/register", "/weekly-reports/**", "/work-summaries", "/courses/**").permitAll()
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions

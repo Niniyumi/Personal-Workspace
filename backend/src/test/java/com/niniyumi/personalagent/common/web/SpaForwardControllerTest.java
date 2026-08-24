@@ -25,5 +25,9 @@ class SpaForwardControllerTest {
         mockMvc.perform(get("/weekly-reports/42"))
                 .andExpect(status().isOk())
                 .andExpect(forwardedUrl("/index.html"));
+
+        mockMvc.perform(get("/courses/42"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
     }
 }

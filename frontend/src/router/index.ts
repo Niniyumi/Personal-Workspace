@@ -6,6 +6,8 @@ import RegisterView from '../views/RegisterView.vue'
 import WeeklyReportDetailView from '../views/WeeklyReportDetailView.vue'
 import WeeklyReportsView from '../views/WeeklyReportsView.vue'
 import WorkSummariesView from '../views/WorkSummariesView.vue'
+import CoursesView from '../views/CoursesView.vue'
+import CourseDetailView from '../views/CourseDetailView.vue'
 
 export function createAppRouter(history: RouterHistory = createWebHistory()) {
   const router = createRouter({
@@ -45,6 +47,18 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
         path: '/work-summaries',
         name: 'work-summaries',
         component: WorkSummariesView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/courses',
+        name: 'courses',
+        component: CoursesView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/courses/:id',
+        name: 'course-detail',
+        component: CourseDetailView,
         meta: { requiresAuth: true },
       },
       { path: '/:pathMatch(.*)*', redirect: '/' },

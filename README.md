@@ -4,8 +4,8 @@ A lightweight personal AI agent for structured weekly reports and work summaries
 
 ## Project Status
 
-Registration/login, the Vue workspace, structured weekly reports, DOCX text extraction,
-and quarterly/yearly work summaries are implemented.
+Registration/login, the Vue workspace, structured weekly reports, work summaries,
+and course recording-to-notes are implemented.
 
 ## First-Phase Scope
 
@@ -15,6 +15,7 @@ and quarterly/yearly work summaries are implemented.
 - Year/month report history and detail view
 - DOCX extraction with configurable AI classification
 - Quarterly/yearly summaries with editable 0–100 score
+- Browser course recording, chunk upload, asynchronous transcription, and editable notes
 - One configurable OpenAI-compatible chat provider
 
 ## Architecture
@@ -23,7 +24,17 @@ and quarterly/yearly work summaries are implemented.
 - Vue 3, TypeScript, and Vite
 - MySQL 8 with Flyway
 - MyBatis-Plus
-Course recording, Redis, queues, object storage, Feishu integration, and the literature assistant are later phases.
+
+The lightweight course flow uses local temporary audio files, a Spring task executor, and
+status polling. Redis, queues, object storage, Feishu integration, and the literature assistant
+remain later phases.
+
+## Course transcription configuration
+
+Set `SPEECH_API_KEY` before testing real transcription. The default speech endpoint is Groq's
+OpenAI-compatible API with `whisper-large-v3-turbo`; temporary audio is stored under
+`COURSE_STORAGE_DIR` and is deleted after successful note generation. `AI_API_KEY` and
+`AI_MODEL` are still required for the final Markdown note generation.
 
 ## Documentation
 
@@ -33,6 +44,7 @@ Course recording, Redis, queues, object storage, Feishu integration, and the lit
 - [Frontend setup](frontend/README.md)
 - [Login test cases](docs/testing/login-ui-test-cases.md)
 - [Weekly report test cases](docs/testing/weekly-report-test-cases.md)
+- [Course recording test cases](docs/testing/course-recording-test-cases.md)
 - [Daily progress](docs/progress/README.md)
 
 ## License

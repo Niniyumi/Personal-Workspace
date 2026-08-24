@@ -14,6 +14,10 @@ import com.niniyumi.personalagent.weeklyreport.application.NoWeeklyReportsForPer
 import com.niniyumi.personalagent.weeklyreport.application.SummaryGenerationException;
 import com.niniyumi.personalagent.weeklyreport.application.WorkSummaryNotFoundException;
 import com.niniyumi.personalagent.weeklyreport.application.InvalidSummaryPeriodException;
+import com.niniyumi.personalagent.course.application.CourseNotFoundException;
+import com.niniyumi.personalagent.course.application.InvalidCoursePartsException;
+import com.niniyumi.personalagent.course.application.InvalidCourseStateException;
+import com.niniyumi.personalagent.course.application.InvalidCourseTitleException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -102,6 +106,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationFailure() {
         return error(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Validation failed");
+    }
+
+    @ExceptionHandler(CourseNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleCourseNotFound() {
+        return error(HttpStatus.NOT_FOUND, "COURSE_NOT_FOUND", "Course not found");
+    }
+
+    @ExceptionHandler({InvalidCoursePartsException.class, InvalidCourseTitleException.class})
+    public ResponseEntity<ApiErrorResponse> handleInvalidCourseInput() {
+        return error(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Validation failed");
+    }
+
+    @ExceptionHandler(InvalidCourseStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidCourseState() {
+        return error(HttpStatus.CONFLICT, "INVALID_COURSE_STATE", "Invalid course state");
     }
 
     private ResponseEntity<ApiErrorResponse> error(HttpStatus status, String code, String message) {

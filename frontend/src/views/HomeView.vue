@@ -21,7 +21,7 @@ const router = useRouter()
 const recentItems = [
   { title: '账号与登录', type: '已完成', time: '当前阶段' },
   { title: '结构化周报', type: '准备开发', time: '下一阶段' },
-  { title: '课程笔记', type: '规划完成', time: '后续阶段' },
+  { title: '课程笔记', type: '开发中', time: '当前阶段' },
 ]
 
 async function logout() {
@@ -36,6 +36,10 @@ function openWeeklyReports() {
 function openWorkSummaries() {
   void router.push({ name: 'work-summaries' })
 }
+
+function openCourses() {
+  void router.push({ name: 'courses' })
+}
 </script>
 
 <template>
@@ -46,7 +50,7 @@ function openWorkSummaries() {
         <nav aria-label="主要导航">
           <a class="workspace-nav active" href="#workspace"><ElIcon><HomeFilled /></ElIcon><span>工作台</span></a>
           <button class="workspace-nav nav-button" type="button" @click="openWeeklyReports"><ElIcon><ChatDotRound /></ElIcon><span>周报助手</span></button>
-          <a class="workspace-nav" href="#course"><ElIcon><Mic /></ElIcon><span>课程笔记</span></a>
+          <button class="workspace-nav nav-button" type="button" @click="openCourses"><ElIcon><Mic /></ElIcon><span>课程笔记</span></button>
           <a class="workspace-nav" href="#archive"><ElIcon><FolderOpened /></ElIcon><span>资料归档</span></a>
         </nav>
         <div class="sidebar-spacer"></div>
@@ -117,6 +121,7 @@ function openWorkSummaries() {
             <span class="card-index">03</span>
             <h3>课程笔记 / COURSE NOTES</h3>
             <p>录音转写并整理课程重点。</p>
+            <ElButton data-test="open-courses" round @click="openCourses">开始录音</ElButton>
             <ElButton round disabled>后续阶段</ElButton>
           </article>
 

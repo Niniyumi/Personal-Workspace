@@ -12,6 +12,8 @@ interface AuthState {
   error: string | null
 }
 
+let refreshPromise: Promise<string> | null = null
+
 function errorCode(error: unknown): string | null {
   if (typeof error !== 'object' || error === null || !('response' in error)) {
     return null
@@ -49,6 +51,26 @@ export const useAuthStore = defineStore('auth', {
       this.tokens = null
       this.user = null
       this.status = 'anonymous'
+    },
+
+    async refreshAccessToken(): Promise<string> {
+      if (refreshPromise !== null) return refreshPromise
+      const refreshToken = this.tokens?.refreshToken
+      if (!refreshToken) throw new Error('登录状态已失效')
+      refreshPromise = authApi.refresh(refreshToken)
+        .then((tokens) => {
+          tokenStorage.write(tokens)
+          this.tokens = tokens
+          return tokens.accessToken
+        })
+        .catch((error) => {
+          this.clearSession()
+          throw error
+        })
+        .finally(() => {
+          refreshPromise = null
+        })
+      return refreshPromise
     },
 
     async login(input: LoginInput): Promise<void> {

@@ -90,4 +90,17 @@ describe('authentication router guard', () => {
     expect(router.currentRoute.value.name).toBe('login')
     expect(router.currentRoute.value.query.redirect).toBe('/work-summaries')
   })
+
+  it('protects the course list and detail routes', async () => {
+    const store = useAuthStore()
+    vi.spyOn(store, 'restoreSession').mockImplementation(async () => {
+      store.status = 'anonymous'
+    })
+    const router = createAppRouter(createMemoryHistory())
+
+    await router.push('/courses/42')
+
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/courses/42')
+  })
 })

@@ -27,6 +27,13 @@ app:
     api-key: ${AI_API_KEY:}
     model: ${AI_MODEL:}
     timeout-seconds: ${AI_TIMEOUT_SECONDS:30}
+  course:
+    storage-dir: ${COURSE_STORAGE_DIR:./data/course-audio}
+  speech:
+    base-url: ${SPEECH_BASE_URL:https://api.groq.com/openai/v1}
+    api-key: ${SPEECH_API_KEY:}
+    model: ${SPEECH_MODEL:whisper-large-v3-turbo}
+    timeout-seconds: ${SPEECH_TIMEOUT_SECONDS:120}
 
 server:
   error:

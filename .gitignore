@@ -26,6 +26,7 @@ Thumbs.db
 
 # Local service data and user-generated files
 .data/
+data/
 recordings/
 uploads/
 exports/

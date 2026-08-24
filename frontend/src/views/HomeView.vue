@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import {
   ChatDotRound,
   Document,
@@ -10,6 +9,7 @@ import {
   Search,
   SwitchButton,
   Upload,
+  UserFilled,
 } from '@element-plus/icons-vue'
 import { ElAvatar, ElButton, ElIcon, ElInput, ElTag } from 'element-plus'
 import { useRouter } from 'vue-router'
@@ -17,8 +17,6 @@ import { useAuthStore } from '../features/auth/authStore'
 
 const store = useAuthStore()
 const router = useRouter()
-
-const avatarText = computed(() => store.user?.displayName.trim().slice(0, 1) || 'U')
 
 const recentItems = [
   { title: '账号与登录', type: '已完成', time: '当前阶段' },
@@ -53,7 +51,7 @@ function openWorkSummaries() {
         </nav>
         <div class="sidebar-spacer"></div>
         <div class="workspace-profile">
-          <ElAvatar :size="42">{{ avatarText }}</ElAvatar>
+          <ElAvatar :size="42" :icon="UserFilled" aria-label="默认用户头像" />
           <div><strong>{{ store.user?.displayName }}</strong><span>{{ store.user?.email }}</span></div>
         </div>
       </aside>
@@ -61,9 +59,9 @@ function openWorkSummaries() {
       <main id="workspace" class="workspace-main">
         <header class="workspace-header">
           <div>
-            <p>PERSONAL WORKSPACE</p>
+            <p>个人工作台 / PERSONAL AGENT</p>
             <h1>今天想整理些什么？</h1>
-            <span>你好，{{ store.user?.displayName }}。把零散的文字、录音和文档交给你的个人 Agent。</span>
+            <span>你好，{{ store.user?.displayName }}。今天也交给 Agent 整理。</span>
           </div>
           <div class="header-actions">
             <ElInput class="search-input" placeholder="搜索你的资料" :prefix-icon="Search" disabled />
@@ -74,7 +72,7 @@ function openWorkSummaries() {
         <section class="dashboard-grid">
           <article class="agent-panel">
             <div class="panel-heading">
-              <div><ElTag round effect="dark">AGENT READY</ElTag><h2>先从一段想法开始</h2></div>
+              <div><ElTag round effect="dark">WEEKLY REPORT</ElTag><h2>写下本周进展</h2></div>
               <span class="panel-number">01</span>
             </div>
             <ElInput
@@ -86,15 +84,14 @@ function openWorkSummaries() {
             />
             <div class="composer-actions">
               <ElButton round :icon="Upload" disabled>上传文档</ElButton>
-              <span>结构化周报正在接入，当前工作台已经连接真实账号。</span>
               <ElButton class="send-button" round type="primary" :icon="Promotion" disabled>发送</ElButton>
             </div>
           </article>
 
           <article class="progress-panel">
             <div class="dark-heading">
-              <div><span>项目开发进度</span><strong>33%</strong></div>
-              <ElTag round color="#ffd84d">PHASE 01</ElTag>
+              <div><span class="progress-label">开发进度 / PROGRESS</span><strong>33%</strong></div>
+              <ElTag class="phase-tag" round color="#ffd84d">PHASE 01</ElTag>
             </div>
             <div class="progress-ring"><span>1</span><small>项完成</small></div>
             <ul>
@@ -106,9 +103,9 @@ function openWorkSummaries() {
 
           <article id="weekly" class="feature-card">
             <div class="feature-icon orange"><ElIcon><Document /></ElIcon></div>
-            <span class="card-index">02 / WEEKLY REPORT</span>
-            <h3>结构化周报</h3>
-            <p>填写核心工作、遇到的问题和下周计划，再按月份查询历史记录。</p>
+            <span class="card-index">02</span>
+            <h3>周报助手 / WEEKLY REPORT</h3>
+            <p>记录本周工作，并按月份查阅。</p>
             <div class="feature-actions">
               <ElButton data-test="open-weekly-reports" round @click="openWeeklyReports">开始填写</ElButton>
               <ElButton data-test="open-work-summaries" round @click="openWorkSummaries">工作总结</ElButton>
@@ -117,14 +114,14 @@ function openWorkSummaries() {
 
           <article id="course" class="feature-card">
             <div class="feature-icon yellow"><ElIcon><Mic /></ElIcon></div>
-            <span class="card-index">03 / COURSE NOTES</span>
-            <h3>课程笔记</h3>
-            <p>录音完成后自动转写，提炼关键概念、待办事项和复习提纲。</p>
+            <span class="card-index">03</span>
+            <h3>课程笔记 / COURSE NOTES</h3>
+            <p>录音转写并整理课程重点。</p>
             <ElButton round disabled>后续阶段</ElButton>
           </article>
 
           <article id="archive" class="recent-card">
-            <div class="recent-heading"><div><span>PROJECT STATUS</span><h3>最近进度</h3></div></div>
+            <div class="recent-heading"><h3>最近进度 / RECENT</h3></div>
             <ul>
               <li v-for="item in recentItems" :key="item.title">
                 <span class="file-dot"></span>
@@ -207,13 +204,13 @@ function openWorkSummaries() {
 .panel-number { color: #bbb5aa; font-size: 42px; font-weight: 850; }
 .agent-panel :deep(.el-textarea__inner) { padding: 18px; border: 0; border-radius: 20px; box-shadow: none; background: #f1eee8; line-height: 1.7; }
 .composer-actions { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
-.composer-actions > span { flex: 1; color: #908c84; font-size: 11px; }
 .composer-actions :deep(.el-button) { min-height: 44px; padding-inline: 20px; }
-.send-button { min-width: 108px; }
+.send-button { min-width: 108px; margin-left: auto; }
 
-.dark-heading span { display: block; color: #b9bac0; font-size: 13px; }
+.progress-label { display: block; color: #b9bac0; font-size: 13px; }
 .dark-heading strong { display: block; margin-top: 5px; font-size: 34px; }
-.dark-heading :deep(.el-tag) { border: 0; color: #17181c; }
+.dark-heading :deep(.phase-tag) { display: inline-flex; height: 36px; flex-shrink: 0; align-items: center; justify-content: center; padding: 0 16px; border: 0; color: #17181c; line-height: 1; white-space: nowrap; }
+.dark-heading :deep(.phase-tag .el-tag__content) { display: flex; align-items: center; line-height: 1; }
 .progress-ring { display: grid; width: 126px; height: 126px; margin: 26px auto; place-content: center; border: 13px solid #34363e; border-top-color: #ffd84d; border-right-color: #f05a18; border-radius: 50%; text-align: center; }
 .progress-ring span { font-size: 32px; font-weight: 850; }
 .progress-ring small { color: #b9bac0; }
@@ -233,8 +230,7 @@ function openWorkSummaries() {
 .feature-actions :deep(.el-button) { margin: 0; }
 
 .recent-card { grid-column: span 4; padding: 26px; border-radius: 26px; }
-.recent-heading span { color: #f05a18; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
-.recent-heading h3 { margin: 6px 0 0; font-size: 24px; }
+.recent-heading h3 { margin: 0; font-size: 24px; }
 .recent-card li { display: grid; min-height: 58px; align-items: center; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 11px; border-top: 1px solid #eeece7; }
 .file-dot { width: 7px; height: 7px; border-radius: 50%; background: #f05a18; }
 .recent-card strong, .recent-card li span { display: block; }
@@ -263,7 +259,6 @@ function openWorkSummaries() {
   .dashboard-grid { margin-top: 24px; }
   .feature-card, .recent-card { grid-column: span 12; }
   .composer-actions { align-items: stretch; flex-direction: column; }
-  .composer-actions > span { order: 3; }
   .composer-actions :deep(.el-button) { width: 100%; margin: 0; }
 }
 </style>

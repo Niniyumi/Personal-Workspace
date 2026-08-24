@@ -109,6 +109,9 @@ describe('HomeView', () => {
     expect(wrapper.text()).toContain('Nini')
     expect(wrapper.text()).toContain('nini@example.com')
     expect(wrapper.text()).not.toContain('静态预览模式')
+    const avatar = wrapper.get('[aria-label="默认用户头像"]')
+    expect(avatar.find('svg').exists()).toBe(true)
+    expect(avatar.text()).toBe('')
     await wrapper.get('[data-test="logout"]').trigger('click')
     await flushPromises()
 

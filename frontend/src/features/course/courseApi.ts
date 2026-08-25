@@ -60,6 +60,14 @@ export function createCourseApi(client: AxiosInstance) {
       })
       return response.data
     },
+
+    async downloadNote(accessToken: string, courseId: number): Promise<Blob> {
+      const response = await client.get<Blob>(`/courses/${courseId}/note.docx`, {
+        headers: bearer(accessToken),
+        responseType: 'blob',
+      })
+      return response.data
+    },
   }
 }
 

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouterHistory } from 'vue-router'
 import { useAuthStore } from '../features/auth/authStore'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
+import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import WeeklyReportDetailView from '../views/WeeklyReportDetailView.vue'
 import WeeklyReportsView from '../views/WeeklyReportsView.vue'
@@ -29,6 +30,12 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
         path: '/register',
         name: 'register',
         component: RegisterView,
+        meta: { guestOnly: true },
+      },
+      {
+        path: '/forgot-password',
+        name: 'forgot-password',
+        component: ForgotPasswordView,
         meta: { guestOnly: true },
       },
       {

@@ -12,4 +12,6 @@ public interface UserRepository {
     Optional<User> findByUsernameOrEmail(String login);
 
     Optional<User> findById(long id);
+
+    void updatePassword(long userId, String passwordHash);
 }

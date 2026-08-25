@@ -205,10 +205,12 @@ export function useCourseRecorder(
     if (courseId === null || !isActive.value) return
     status.value = 'uploading'
     if (timer !== null) dependencies.clearInterval(timer)
+    let completing = false
     try {
       if (rotationPromise !== null) await rotationPromise
       await finishSegment(false)
       await uploadQueue
+      completing = true
       await store.complete(courseId)
       closeMedia()
       status.value = 'processing'
@@ -216,7 +218,7 @@ export function useCourseRecorder(
       if (failedParts.length === 0 && lastUploadedPart !== null) {
         failedParts = [lastUploadedPart]
       }
-      failRecording('音频上传失败，请重试上传')
+      failRecording(completing ? '课程处理启动失败，请重试' : '音频上传失败，请重试上传')
       throw cause
     }
   }

@@ -25,7 +25,7 @@ public class CourseService {
         Instant now = clock.instant();
         return repository.save(new Course(
                 null, userId, title.trim(), CourseStatus.RECORDING, 0,
-                null, null, null, now, now));
+                0, null, null, null, now, now));
     }
 
     public Course get(long userId, long courseId) {
@@ -45,7 +45,7 @@ public class CourseService {
         }
         Course updated = new Course(
                 current.id(), current.userId(), current.title(), current.status(),
-                current.durationSeconds(), current.transcript(), normalize(noteContent),
+                current.durationSeconds(), current.processingProgress(), current.transcript(), normalize(noteContent),
                 current.errorMessage(), current.createdAt(), clock.instant());
         return repository.update(updated);
     }

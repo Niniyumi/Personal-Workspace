@@ -13,6 +13,7 @@ const course: Course = {
   title: 'Java 并发课',
   status: 'RECORDING',
   durationSeconds: 0,
+  processingProgress: 0,
   transcript: null,
   noteContent: null,
   errorMessage: null,
@@ -62,5 +63,15 @@ describe('courseApi', () => {
     await expect(api.complete('access-token', 9)).resolves.toMatchObject({ status: 'PROCESSING' })
     await expect(api.retry('access-token', 9)).resolves.toMatchObject({ status: 'PROCESSING' })
     await expect(api.saveNote('access-token', 9, '# 新笔记')).resolves.toMatchObject({ noteContent: '# 新笔记' })
+  })
+
+  it('downloads the generated note as a docx blob', async () => {
+    mock.onGet('/courses/9/note.docx').reply((config) => {
+      expect(config.headers?.Authorization).toBe('Bearer access-token')
+      expect(config.responseType).toBe('blob')
+      return [200, new Blob(['docx'])]
+    })
+
+    await expect(api.downloadNote('access-token', 9)).resolves.toBeInstanceOf(Blob)
   })
 })

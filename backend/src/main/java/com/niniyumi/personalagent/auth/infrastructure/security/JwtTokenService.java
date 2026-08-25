@@ -4,6 +4,8 @@ import com.niniyumi.personalagent.auth.domain.User;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.proc.SecurityContext;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import javax.crypto.SecretKey;
@@ -41,6 +43,16 @@ public class JwtTokenService {
     }
 
     static SecretKey secretKey(String secret) {
-        return new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        if (secret == null || secret.length() < 16) {
+            throw new IllegalArgumentException("JWT_SECRET must contain at least 16 characters");
+        }
+        try {
+            // 将便于本地配置的 16 位密钥派生为 HS256 要求的 32 字节密钥。
+            byte[] keyBytes = MessageDigest.getInstance("SHA-256")
+                    .digest(secret.getBytes(StandardCharsets.UTF_8));
+            return new SecretKeySpec(keyBytes, "HmacSHA256");
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
     }
 }

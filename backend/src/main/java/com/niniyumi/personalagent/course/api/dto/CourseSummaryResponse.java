@@ -9,12 +9,13 @@ public record CourseSummaryResponse(
         String title,
         CourseStatus status,
         int durationSeconds,
+        int processingProgress,
         String errorMessage,
         Instant createdAt,
         Instant updatedAt) {
     public static CourseSummaryResponse from(Course course) {
         return new CourseSummaryResponse(
                 course.id(), course.title(), course.status(), course.durationSeconds(),
-                course.errorMessage(), course.createdAt(), course.updatedAt());
+                course.processingProgress(), course.errorMessage(), course.createdAt(), course.updatedAt());
     }
 }

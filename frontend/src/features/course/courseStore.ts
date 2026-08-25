@@ -31,10 +31,12 @@ export const useCourseStore = defineStore('course', () => {
         try {
           return await operation(await auth.refreshAccessToken())
         } catch (retryCause) {
+          logCourseError(retryCause)
           error.value = '登录状态已失效，请重新登录'
           throw retryCause
         }
       }
+      logCourseError(cause)
       error.value = '操作失败，请稍后重试'
       throw cause
     }
@@ -95,9 +97,19 @@ export const useCourseStore = defineStore('course', () => {
     return course
   }
 
+  async function downloadNote(courseId: number, title: string) {
+    const blob = await request((token) => courseApi.downloadNote(token, courseId))
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${title}.docx`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return {
     courses, current, loading, error, reset, loadAll, loadOne, get: loadOne,
-    create, uploadPart, complete, retry, saveNote,
+    create, uploadPart, complete, retry, saveNote, downloadNote,
   }
 })
 
@@ -105,4 +117,19 @@ function isUnauthorized(cause: unknown) {
   return typeof cause === 'object' && cause !== null
     && 'response' in cause
     && (cause as { response?: { status?: number } }).response?.status === 401
+}
+
+// 记录接口定位信息，不记录音频内容、访问令牌等敏感数据。
+function logCourseError(cause: unknown) {
+  const requestError = cause as {
+    config?: { method?: string; url?: string }
+    response?: { status?: number; data?: { code?: string; traceId?: string } }
+  }
+  console.error('[course] request failed', {
+    method: requestError.config?.method?.toUpperCase(),
+    url: requestError.config?.url,
+    status: requestError.response?.status,
+    code: requestError.response?.data?.code,
+    traceId: requestError.response?.data?.traceId,
+  })
 }

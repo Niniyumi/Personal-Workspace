@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { logApiError } from '../../shared/logApiError'
 import { useAuthStore } from '../auth/authStore'
 import { workSummaryApi } from './workSummaryApi'
 import type { WorkSummary, WorkSummaryInput, WorkSummarySelection } from './types'
@@ -40,6 +41,7 @@ export const useWorkSummaryStore = defineStore('workSummary', () => {
       return result
     } catch (cause) {
       // 生成失败时保留上一份可见总结，避免用户正在编辑的内容消失。
+      logApiError('work-summary', cause)
       error.value = errorMessage(cause)
       return null
     } finally {
@@ -57,6 +59,7 @@ export const useWorkSummaryStore = defineStore('workSummary', () => {
       summary.value = result
       return result
     } catch (cause) {
+      logApiError('work-summary', cause)
       error.value = errorMessage(cause)
       return null
     } finally {
@@ -74,6 +77,7 @@ export const useWorkSummaryStore = defineStore('workSummary', () => {
       summary.value = result
       return result
     } catch (cause) {
+      logApiError('work-summary', cause)
       error.value = errorMessage(cause)
       return null
     } finally {

@@ -118,6 +118,36 @@ describe('authStore', () => {
     expect(tokenStorage.read()).toBeNull()
   })
 
+  it('logs the original error when registration fails', async () => {
+    const failure = {
+      response: {
+        status: 404,
+        data: { code: 'NOT_FOUND', message: 'Not Found', traceId: 'trace-register' },
+      },
+      config: { url: '/auth/register', method: 'post' },
+    }
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.mocked(authApi.register).mockRejectedValue(failure)
+    const store = useAuthStore()
+
+    await expect(store.register({
+      username: 'nini',
+      email: 'nini@example.com',
+      password: 'UnitTest7!',
+      displayName: 'Nini',
+    })).rejects.toBe(failure)
+
+    expect(consoleError).toHaveBeenCalledWith('[auth] register failed', {
+      method: 'POST',
+      url: '/auth/register',
+      status: 404,
+      code: 'NOT_FOUND',
+      message: 'Not Found',
+      traceId: 'trace-register',
+    })
+    consoleError.mockRestore()
+  })
+
   it('clears local state even when server logout rejects the token', async () => {
     tokenStorage.write(tokens)
     vi.mocked(authApi.logout).mockRejectedValue(new Error('already revoked'))

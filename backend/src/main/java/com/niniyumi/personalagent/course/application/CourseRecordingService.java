@@ -85,7 +85,7 @@ public class CourseRecordingService {
         }
         return courses.update(new Course(
                 course.id(), course.userId(), course.title(), CourseStatus.PROCESSING, total,
-                null, null, null, course.createdAt(), clock.instant()));
+                10, null, null, null, course.createdAt(), clock.instant()));
     }
 
     public Course retry(long userId, long courseId) {
@@ -95,6 +95,6 @@ public class CourseRecordingService {
         }
         return courses.update(new Course(
                 course.id(), course.userId(), course.title(), CourseStatus.PROCESSING,
-                course.durationSeconds(), null, null, null, course.createdAt(), clock.instant()));
+                course.durationSeconds(), 10, null, null, null, course.createdAt(), clock.instant()));
     }
 }

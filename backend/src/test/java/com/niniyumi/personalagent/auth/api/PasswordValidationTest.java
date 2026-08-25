@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niniyumi.personalagent.auth.application.AuthService;
+import com.niniyumi.personalagent.auth.application.PasswordResetService;
 import com.niniyumi.personalagent.auth.application.RefreshTokenService;
 import com.niniyumi.personalagent.auth.domain.User;
 import com.niniyumi.personalagent.auth.domain.UserRepository;
@@ -50,6 +51,9 @@ class PasswordValidationTest {
 
     @MockBean
     private JwtProperties jwtProperties;
+
+    @MockBean
+    private PasswordResetService passwordResetService;
 
     @ParameterizedTest
     @MethodSource("validBoundaryPasswords")

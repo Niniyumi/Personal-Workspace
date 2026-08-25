@@ -5,7 +5,10 @@ import com.niniyumi.personalagent.auth.api.dto.AuthTokensResponse;
 import com.niniyumi.personalagent.auth.api.dto.LoginRequest;
 import com.niniyumi.personalagent.auth.api.dto.RefreshRequest;
 import com.niniyumi.personalagent.auth.api.dto.UserResponse;
+import com.niniyumi.personalagent.auth.api.dto.PasswordResetRequest;
+import com.niniyumi.personalagent.auth.api.dto.PasswordResetConfirmRequest;
 import com.niniyumi.personalagent.auth.application.AuthService;
+import com.niniyumi.personalagent.auth.application.PasswordResetService;
 import com.niniyumi.personalagent.auth.application.RegisterCommand;
 import com.niniyumi.personalagent.auth.application.LoginCommand;
 import com.niniyumi.personalagent.auth.application.LoginResult;
@@ -24,10 +27,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     private final AuthService authService;
     private final JwtProperties jwtProperties;
+    private final PasswordResetService passwordResetService;
 
-    public AuthController(AuthService authService, JwtProperties jwtProperties) {
+    public AuthController(AuthService authService, JwtProperties jwtProperties,
+            PasswordResetService passwordResetService) {
         this.authService = authService;
         this.jwtProperties = jwtProperties;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/register")
@@ -51,6 +57,18 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshRequest request) {
         authService.logout(request.refreshToken());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<Void> requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+        passwordResetService.request(request.email());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<Void> confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        passwordResetService.confirm(request.email(), request.code(), request.newPassword());
         return ResponseEntity.noContent().build();
     }
 

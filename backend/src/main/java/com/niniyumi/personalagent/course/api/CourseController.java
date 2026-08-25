@@ -10,8 +10,14 @@ import com.niniyumi.personalagent.course.application.CourseProcessingService;
 import com.niniyumi.personalagent.course.application.CourseRecordingService;
 import com.niniyumi.personalagent.course.application.CourseService;
 import com.niniyumi.personalagent.course.domain.Course;
+import com.niniyumi.personalagent.course.domain.CourseStatus;
+import com.niniyumi.personalagent.course.application.InvalidCourseStateException;
+import com.niniyumi.personalagent.course.infrastructure.document.CourseDocxExporter;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.nio.charset.StandardCharsets;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,14 +39,17 @@ public class CourseController {
     private final CourseService courseService;
     private final CourseRecordingService recordingService;
     private final CourseProcessingService processingService;
+    private final CourseDocxExporter docxExporter;
 
     public CourseController(
             CourseService courseService,
             CourseRecordingService recordingService,
-            CourseProcessingService processingService) {
+            CourseProcessingService processingService,
+            CourseDocxExporter docxExporter) {
         this.courseService = courseService;
         this.recordingService = recordingService;
         this.processingService = processingService;
+        this.docxExporter = docxExporter;
     }
 
     @PostMapping
@@ -99,5 +108,22 @@ public class CourseController {
             @PathVariable long courseId,
             @Valid @RequestBody UpdateCourseNoteRequest request) {
         return CourseResponse.from(courseService.saveNote(user.userId(), courseId, request.noteContent()));
+    }
+
+    @GetMapping(value = "/{courseId}/note.docx",
+            produces = "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    public ResponseEntity<byte[]> downloadNote(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable long courseId) {
+        Course course = courseService.get(user.userId(), courseId);
+        if (course.status() != CourseStatus.READY) throw new InvalidCourseStateException();
+        String disposition = ContentDisposition.attachment()
+                .filename(course.title() + ".docx", StandardCharsets.UTF_8)
+                .build().toString();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .body(docxExporter.export(course));
     }
 }

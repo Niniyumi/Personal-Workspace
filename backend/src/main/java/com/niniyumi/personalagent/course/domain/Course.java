@@ -8,6 +8,7 @@ public record Course(
         String title,
         CourseStatus status,
         int durationSeconds,
+        int processingProgress,
         String transcript,
         String noteContent,
         String errorMessage,

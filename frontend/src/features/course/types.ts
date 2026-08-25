@@ -5,6 +5,7 @@ export interface Course {
   title: string
   status: CourseStatus
   durationSeconds: number
+  processingProgress: number
   transcript: string | null
   noteContent: string | null
   errorMessage: string | null
@@ -13,7 +14,7 @@ export interface Course {
 }
 
 export type CourseSummary = Pick<Course,
-  'id' | 'title' | 'status' | 'durationSeconds' | 'errorMessage' | 'createdAt' | 'updatedAt'>
+  'id' | 'title' | 'status' | 'durationSeconds' | 'processingProgress' | 'errorMessage' | 'createdAt' | 'updatedAt'>
 
 export interface CourseAudioPart {
   id: number

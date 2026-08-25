@@ -31,10 +31,9 @@ remain later phases.
 
 ## Course transcription configuration
 
-Set `SPEECH_API_KEY` before testing real transcription. The default speech endpoint is Groq's
-OpenAI-compatible API with `whisper-large-v3-turbo`; temporary audio is stored under
-`COURSE_STORAGE_DIR` and is deleted after successful note generation. `AI_API_KEY` and
-`AI_MODEL` are still required for the final Markdown note generation.
+Set `DASHSCOPE_API_KEY` before testing real transcription. The default providers use Alibaba
+Cloud Model Studio with `qwen3-asr-flash` for speech and `qwen-plus` for Markdown notes.
+Temporary audio is stored under `COURSE_STORAGE_DIR` and deleted after successful generation.
 
 ## Documentation
 

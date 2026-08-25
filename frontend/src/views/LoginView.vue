@@ -13,6 +13,7 @@ const login = ref('')
 const password = ref('')
 const pending = computed(() => store.status === 'loading')
 const registered = computed(() => route.query.registered === '1')
+const reset = computed(() => route.query.reset === '1')
 
 async function submit() {
   try {
@@ -28,6 +29,7 @@ async function submit() {
 <template>
   <AuthShell title="欢迎回来" description="登录后继续整理课程、周报和个人成果。">
     <p v-if="registered" class="notice" role="status">账号创建成功，现在可以登录。</p>
+    <p v-if="reset" class="notice" role="status">密码已重置，请使用新密码登录。</p>
     <form class="auth-form" @submit.prevent="submit">
       <div class="field">
         <label for="login">用户名或邮箱</label>
@@ -64,6 +66,7 @@ async function submit() {
         {{ pending ? '正在登录…' : '登录并进入工作台' }}
       </ElButton>
     </form>
+    <p class="auth-switch"><RouterLink to="/forgot-password">忘记密码？</RouterLink></p>
     <p class="auth-switch">还没有账号？<RouterLink to="/register">创建账号</RouterLink></p>
   </AuthShell>
 </template>

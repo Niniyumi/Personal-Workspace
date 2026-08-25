@@ -12,6 +12,14 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 11MB
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_AUTH_CODE:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
 
 mybatis-plus:
   configuration:
@@ -23,16 +31,16 @@ app:
     access-token-minutes: 15
     refresh-token-days: 7
   ai:
-    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
-    api-key: ${AI_API_KEY:}
-    model: ${AI_MODEL:}
+    base-url: ${AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    api-key: ${DASHSCOPE_API_KEY:}
+    model: ${AI_MODEL:qwen-plus}
     timeout-seconds: ${AI_TIMEOUT_SECONDS:30}
   course:
     storage-dir: ${COURSE_STORAGE_DIR:./data/course-audio}
   speech:
-    base-url: ${SPEECH_BASE_URL:https://api.groq.com/openai/v1}
-    api-key: ${SPEECH_API_KEY:}
-    model: ${SPEECH_MODEL:whisper-large-v3-turbo}
+    base-url: ${SPEECH_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    api-key: ${DASHSCOPE_API_KEY:}
+    model: ${SPEECH_MODEL:qwen3-asr-flash}
     timeout-seconds: ${SPEECH_TIMEOUT_SECONDS:120}
 
 server:

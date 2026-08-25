@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.niniyumi.personalagent.auth.application.AuthService;
+import com.niniyumi.personalagent.auth.application.PasswordResetService;
 import com.niniyumi.personalagent.auth.application.InvalidCredentialsException;
 import com.niniyumi.personalagent.auth.application.InvalidRefreshTokenException;
 import com.niniyumi.personalagent.auth.application.LoginCommand;
@@ -36,6 +37,9 @@ class AuthControllerTest {
 
     @MockBean
     private JwtProperties jwtProperties;
+
+    @MockBean
+    private PasswordResetService passwordResetService;
 
     @BeforeEach
     void setUp() {

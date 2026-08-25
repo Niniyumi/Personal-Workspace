@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { logApiError } from '../../shared/logApiError'
 import { useAuthStore } from '../auth/authStore'
 import { weeklyReportApi } from './weeklyReportApi'
 import type { DocxImportResult, WeeklyReport, WeeklyReportInput } from './types'
@@ -23,6 +24,7 @@ export const useWeeklyReportStore = defineStore('weeklyReport', () => {
     try {
       return await operation(accessToken)
     } catch (cause) {
+      logApiError('weekly-report', cause)
       error.value = '操作失败，请稍后重试'
       throw cause
     } finally {

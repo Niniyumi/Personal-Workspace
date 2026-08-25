@@ -152,6 +152,7 @@ describe('useCourseRecorder', () => {
     await controls.start('编译原理')
     await expect(controls.stop()).rejects.toThrow('timeout')
     expect(controls.canRetry.value).toBe(true)
+    expect(controls.error.value).toBe('课程处理启动失败，请重试')
 
     await controls.retryUploads()
     expect(store.uploadPart).toHaveBeenCalledTimes(2)

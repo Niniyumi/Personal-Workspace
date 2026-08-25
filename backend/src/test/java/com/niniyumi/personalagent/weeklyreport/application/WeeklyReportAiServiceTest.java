@@ -10,7 +10,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+@ExtendWith(OutputCaptureExtension.class)
 class WeeklyReportAiServiceTest {
 
     @Test
@@ -28,7 +32,7 @@ class WeeklyReportAiServiceTest {
     }
 
     @Test
-    void providerFailureFallsBackToAllTextInCoreWork() {
+    void providerFailureFallsBackToAllTextInCoreWork(CapturedOutput output) {
         ChatProvider provider = (system, user) -> {
             throw new AiProviderException("provider unavailable");
         };
@@ -37,6 +41,7 @@ class WeeklyReportAiServiceTest {
         DocumentClassification result = service.classifyDocument("原始周报文字");
 
         assertThat(result).isEqualTo(new DocumentClassification("原始周报文字", null, null));
+        assertThat(output).contains("Weekly report document classification failed");
     }
 
     @Test
@@ -62,7 +67,7 @@ class WeeklyReportAiServiceTest {
     }
 
     @Test
-    void invalidSummaryDoesNotFallBackOrOverwriteSavedContent() {
+    void invalidSummaryDoesNotFallBackOrOverwriteSavedContent(CapturedOutput output) {
         ChatProvider provider = (system, user) -> """
                 {"coreContent":"关键项目交付","routineWork":"日常维护","selfScore":120}
                 """;
@@ -70,6 +75,7 @@ class WeeklyReportAiServiceTest {
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.generateSummary(List.of(report())))
                 .isInstanceOf(SummaryGenerationException.class);
+        assertThat(output).contains("Work summary generation failed");
     }
 
     private WeeklyReport report() {

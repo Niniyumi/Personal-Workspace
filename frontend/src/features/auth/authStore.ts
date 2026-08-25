@@ -37,6 +37,25 @@ function userMessage(error: unknown): string {
   }
 }
 
+// 只记录排错所需的请求信息，不记录用户名、邮箱和密码等表单内容。
+function logAuthError(operation: string, error: unknown): void {
+  const axiosError = error as {
+    config?: { method?: string; url?: string }
+    response?: {
+      status?: number
+      data?: { code?: string; message?: string; traceId?: string }
+    }
+  }
+  console.error(`[auth] ${operation} failed`, {
+    method: axiosError.config?.method?.toUpperCase(),
+    url: axiosError.config?.url,
+    status: axiosError.response?.status,
+    code: axiosError.response?.data?.code,
+    message: axiosError.response?.data?.message,
+    traceId: axiosError.response?.data?.traceId,
+  })
+}
+
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     status: 'idle',
@@ -84,6 +103,7 @@ export const useAuthStore = defineStore('auth', {
         this.user = user
         this.status = 'authenticated'
       } catch (error) {
+        logAuthError('login', error)
         this.clearSession()
         this.error = userMessage(error)
         throw error
@@ -98,6 +118,7 @@ export const useAuthStore = defineStore('auth', {
         this.status = 'anonymous'
         return user
       } catch (error) {
+        logAuthError('register', error)
         this.status = 'anonymous'
         this.error = userMessage(error)
         throw error

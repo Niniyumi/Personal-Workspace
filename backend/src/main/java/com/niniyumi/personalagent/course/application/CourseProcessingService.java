@@ -6,16 +6,22 @@ import com.niniyumi.personalagent.course.domain.CourseAudioPartRepository;
 import com.niniyumi.personalagent.course.domain.CourseRepository;
 import com.niniyumi.personalagent.course.domain.CourseStatus;
 import com.niniyumi.personalagent.course.infrastructure.speech.SpeechProvider;
+import com.niniyumi.personalagent.course.infrastructure.speech.SpeechProviderException;
 import com.niniyumi.personalagent.course.infrastructure.storage.CourseAudioStorage;
 import com.niniyumi.personalagent.weeklyreport.infrastructure.ai.ChatProvider;
+import com.niniyumi.personalagent.weeklyreport.infrastructure.ai.AiProviderException;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
+import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CourseProcessingService {
+    private static final Logger log = LoggerFactory.getLogger(CourseProcessingService.class);
     private static final String NOTE_PROMPT = """
             你是课程笔记助手。请根据完整课堂转写生成简洁的 Markdown 笔记，固定包含：
             课程摘要、核心知识点、重要概念、示例或案例、复习提纲。不要编造转写中不存在的内容。
@@ -51,21 +57,30 @@ public class CourseProcessingService {
         Course course = courses.findByIdAndUserId(courseId, userId)
                 .orElseThrow(CourseNotFoundException::new);
         List<CourseAudioPart> audioParts = parts.findAllByCourseId(courseId);
+        int progress = 10;
         try {
-            String transcript = audioParts.stream()
-                    .map(part -> speechProvider.transcribe(Path.of(part.storagePath())))
-                    .reduce((left, right) -> left + "\n\n" + right)
-                    .orElseThrow(InvalidCoursePartsException::new);
+            courses.update(withProgress(course, progress));
+            if (audioParts.isEmpty()) throw new InvalidCoursePartsException();
+            List<String> transcripts = new ArrayList<>();
+            for (int index = 0; index < audioParts.size(); index++) {
+                transcripts.add(speechProvider.transcribe(Path.of(audioParts.get(index).storagePath())));
+                progress = 10 + Math.round(65F * (index + 1) / audioParts.size());
+                courses.update(withProgress(course, progress));
+            }
+            String transcript = String.join("\n\n", transcripts);
+            progress = 85;
+            courses.update(withProgress(course, progress));
             String note = chatProvider.complete(NOTE_PROMPT, transcript);
             courses.update(new Course(
                     course.id(), course.userId(), course.title(), CourseStatus.READY,
-                    course.durationSeconds(), transcript, note.trim(), null,
+                    course.durationSeconds(), 100, transcript, note.trim(), null,
                     course.createdAt(), clock.instant()));
 
         } catch (RuntimeException exception) {
+            log.error("Course processing failed, userId={}, courseId={}", userId, courseId, exception);
             courses.update(new Course(
                     course.id(), course.userId(), course.title(), CourseStatus.FAILED,
-                    course.durationSeconds(), null, null, "转写或笔记生成失败，请重新处理",
+                    course.durationSeconds(), progress, null, null, processingErrorMessage(exception),
                     course.createdAt(), clock.instant()));
             return;
         }
@@ -75,8 +90,27 @@ public class CourseProcessingService {
             List<Path> paths = audioParts.stream().map(part -> Path.of(part.storagePath())).toList();
             storage.deleteAll(paths);
             parts.deleteAllByCourseId(courseId);
-        } catch (RuntimeException ignored) {
+        } catch (RuntimeException exception) {
             // READY 是最终业务结果，不能因临时文件清理失败被降级为 FAILED。
+            log.warn("Course audio cleanup failed, userId={}, courseId={}", userId, courseId, exception);
         }
+    }
+
+    private Course withProgress(Course course, int progress) {
+        return new Course(course.id(), course.userId(), course.title(), CourseStatus.PROCESSING,
+                course.durationSeconds(), progress, course.transcript(), course.noteContent(), null,
+                course.createdAt(), clock.instant());
+    }
+
+    private String processingErrorMessage(RuntimeException exception) {
+        if (exception instanceof SpeechProviderException
+                && "Speech provider is not configured".equals(exception.getMessage())) {
+            return "语音识别服务未配置，请设置 DASHSCOPE_API_KEY";
+        }
+        if (exception instanceof AiProviderException
+                && "AI provider is not configured".equals(exception.getMessage())) {
+            return "笔记模型未配置，请设置 DASHSCOPE_API_KEY";
+        }
+        return "转写或笔记生成失败，请重新处理";
     }
 }

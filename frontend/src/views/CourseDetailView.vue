@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ArrowLeft, Refresh } from '@element-plus/icons-vue'
-import { ElButton, ElIcon, ElInput, ElTag } from 'element-plus'
+import { ArrowLeft, Download, Refresh } from '@element-plus/icons-vue'
+import { ElButton, ElIcon, ElInput, ElProgress, ElTag } from 'element-plus'
 import { useRoute } from 'vue-router'
 import { useCourseStore } from '../features/course/courseStore'
 
@@ -12,6 +12,7 @@ const courseId = Number(route.params.id)
 const course = computed(() => store.current?.id === courseId ? store.current : null)
 const note = ref('')
 const notice = ref('')
+const downloadPending = ref(false)
 let pollTimer: number | null = null
 
 watch(() => course.value?.noteContent, (content) => {
@@ -58,6 +59,14 @@ async function retry() {
     startPolling()
   }).catch(() => undefined)
 }
+
+async function downloadNote() {
+  if (!course.value || downloadPending.value) return
+  downloadPending.value = true
+  await store.downloadNote(courseId, course.value.title)
+    .catch(() => undefined)
+    .finally(() => { downloadPending.value = false })
+}
 </script>
 
 <template>
@@ -76,7 +85,15 @@ async function retry() {
       <p v-if="notice" class="success-notice" role="status">{{ notice }}</p>
 
       <section v-if="course?.status === 'PROCESSING'" class="processing-card" aria-busy="true">
-        <span class="spinner"></span><h2>正在转写并生成笔记</h2><p>可以离开此页面，稍后回来查看。</p>
+        <span class="spinner"></span><h2>正在转写并生成笔记</h2>
+        <ElProgress
+          data-test="course-progress"
+          :percentage="course.processingProgress"
+          :stroke-width="14"
+          striped
+          striped-flow
+        />
+        <p>可以离开此页面，稍后回来查看。</p>
       </section>
 
       <section v-else-if="course?.status === 'FAILED'" class="failed-card">
@@ -93,7 +110,15 @@ async function retry() {
         <section class="content-card note-card">
           <span>MY NOTES</span><h2>课程笔记</h2>
           <ElInput v-model="note" data-test="course-note" type="textarea" :rows="18" />
-          <ElButton data-test="save-course-note" round type="primary" @click="saveNote">保存笔记</ElButton>
+          <div class="note-actions">
+            <ElButton data-test="save-course-note" round type="primary" @click="saveNote">保存笔记</ElButton>
+            <ElButton
+              data-test="download-course-note"
+              round
+              :loading="downloadPending"
+              @click="downloadNote"
+            ><ElIcon><Download /></ElIcon>下载 DOCX</ElButton>
+          </div>
         </section>
       </div>
     </main>
@@ -114,11 +139,13 @@ async function retry() {
 .content-card pre { max-height: 560px; overflow: auto; margin: 0; color: #57534d; font: inherit; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
 .note-card { background: #24262d; color: #fff; }
 .note-card :deep(.el-textarea__inner) { padding: 18px; border: 0; border-radius: 18px; box-shadow: none; line-height: 1.7; }
-.note-card :deep(.el-button) { min-height: 44px; margin-top: 16px; }
+.note-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.note-card :deep(.el-button) { min-height: 44px; margin: 0; }
 .note-card :deep(.el-button--primary), .failed-card :deep(.el-button--primary) { --el-button-bg-color: #17181c; --el-button-border-color: #17181c; --el-button-hover-bg-color: #f05a18; --el-button-hover-border-color: #f05a18; }
 .processing-card, .failed-card { margin-top: 38px; text-align: center; }
 .processing-card h2, .failed-card h2 { margin: 14px 0 8px; }
 .processing-card p, .failed-card p { color: #77736c; }
+.processing-card :deep(.el-progress) { width: min(520px, 100%); margin: 20px auto 0; }
 .spinner { display: inline-block; width: 42px; height: 42px; border: 6px solid #eee8dc; border-top-color: #f05a18; border-radius: 50%; animation: spin 1s linear infinite; }
 .error-notice, .success-notice { margin: 20px 0 0; padding: 12px 15px; border-radius: 15px; font-size: 13px; }
 .error-notice { color: #9f2d13; background: #fff0e9; }.success-notice { color: #554100; background: #fff1a8; }

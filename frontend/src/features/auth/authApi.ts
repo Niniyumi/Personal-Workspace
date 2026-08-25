@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios'
-import type { AuthTokens, LoginInput, RegisterInput, User } from './types'
+import type { AuthTokens, ConfirmPasswordResetInput, LoginInput, RegisterInput, User } from './types'
 
 export function createAuthApi(client: AxiosInstance) {
   return {
@@ -27,6 +27,14 @@ export function createAuthApi(client: AxiosInstance) {
 
     async logout(refreshToken: string): Promise<void> {
       await client.post('/auth/logout', { refreshToken })
+    },
+
+    async requestPasswordReset(email: string): Promise<void> {
+      await client.post('/auth/password-reset/request', { email })
+    },
+
+    async confirmPasswordReset(input: ConfirmPasswordResetInput): Promise<void> {
+      await client.post('/auth/password-reset/confirm', input)
     },
   }
 }

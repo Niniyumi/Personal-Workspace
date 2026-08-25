@@ -6,10 +6,13 @@ import com.niniyumi.personalagent.weeklyreport.infrastructure.ai.AiProviderExcep
 import com.niniyumi.personalagent.weeklyreport.infrastructure.ai.ChatProvider;
 import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReport;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class WeeklyReportAiService {
+    private static final Logger log = LoggerFactory.getLogger(WeeklyReportAiService.class);
     private static final String SYSTEM_PROMPT = """
             你是周报整理助手。请把用户提供的文字归类为 JSON 对象，只包含以下三个字段：
             coreWork、problems、nextWeekPlan。字段值必须是字符串或 null。
@@ -38,6 +41,8 @@ public class WeeklyReportAiService {
                     coreWork, optional(parsed.problems()), optional(parsed.nextWeekPlan()));
         } catch (AiProviderException | JsonProcessingException | IllegalArgumentException exception) {
             // 模型不可用或格式不可靠时不重试，直接把原文放入核心工作，保证用户仍可继续编辑。
+            log.warn("Weekly report document classification failed; using extracted text fallback: {}",
+                    exception.getMessage());
             return new DocumentClassification(extractedText, null, null);
         }
     }
@@ -54,6 +59,7 @@ public class WeeklyReportAiService {
             return new GeneratedWorkSummary(coreContent, routineWork, parsed.selfScore());
         } catch (AiProviderException | JsonProcessingException | IllegalArgumentException exception) {
             // 汇总失败时不覆盖旧总结，交由接口明确提示用户稍后重试。
+            log.error("Work summary generation failed: {}", exception.getMessage());
             throw new SummaryGenerationException();
         }
     }

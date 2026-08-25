@@ -56,4 +56,16 @@ describe('authApi', () => {
     await expect(api.refresh('old-refresh-token')).resolves.toEqual(tokens)
     await expect(api.logout('new-refresh-token')).resolves.toBeUndefined()
   })
+
+  it('sends both password reset contracts', async () => {
+    mock.onPost('/auth/password-reset/request', { email: 'nini@example.com' }).reply(204)
+    mock.onPost('/auth/password-reset/confirm', {
+      email: 'nini@example.com', code: '123456', newPassword: 'NewPassword8!',
+    }).reply(204)
+
+    await expect(api.requestPasswordReset('nini@example.com')).resolves.toBeUndefined()
+    await expect(api.confirmPasswordReset({
+      email: 'nini@example.com', code: '123456', newPassword: 'NewPassword8!',
+    })).resolves.toBeUndefined()
+  })
 })

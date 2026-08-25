@@ -9,6 +9,7 @@ public record CourseResponse(
         String title,
         CourseStatus status,
         int durationSeconds,
+        int processingProgress,
         String transcript,
         String noteContent,
         String errorMessage,
@@ -17,7 +18,7 @@ public record CourseResponse(
     public static CourseResponse from(Course course) {
         return new CourseResponse(
                 course.id(), course.title(), course.status(), course.durationSeconds(),
-                course.transcript(), course.noteContent(), course.errorMessage(),
+                course.processingProgress(), course.transcript(), course.noteContent(), course.errorMessage(),
                 course.createdAt(), course.updatedAt());
     }
 }

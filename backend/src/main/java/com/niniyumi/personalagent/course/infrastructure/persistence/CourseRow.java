@@ -15,6 +15,7 @@ public class CourseRow {
     private String title;
     private CourseStatus status;
     private Integer durationSeconds;
+    private Integer processingProgress;
     private String transcript;
     private String noteContent;
     private String errorMessage;
@@ -28,6 +29,7 @@ public class CourseRow {
         row.title = course.title();
         row.status = course.status();
         row.durationSeconds = course.durationSeconds();
+        row.processingProgress = course.processingProgress();
         row.transcript = course.transcript();
         row.noteContent = course.noteContent();
         row.errorMessage = course.errorMessage();
@@ -37,7 +39,7 @@ public class CourseRow {
     }
 
     Course toDomain() {
-        return new Course(id, userId, title, status, durationSeconds, transcript, noteContent,
+        return new Course(id, userId, title, status, durationSeconds, processingProgress, transcript, noteContent,
                 errorMessage, createdAt, updatedAt);
     }
 
@@ -46,6 +48,7 @@ public class CourseRow {
     public String getTitle() { return title; }
     public CourseStatus getStatus() { return status; }
     public Integer getDurationSeconds() { return durationSeconds; }
+    public Integer getProcessingProgress() { return processingProgress; }
     public String getTranscript() { return transcript; }
     public String getNoteContent() { return noteContent; }
     public String getErrorMessage() { return errorMessage; }
@@ -56,6 +59,7 @@ public class CourseRow {
     public void setTitle(String title) { this.title = title; }
     public void setStatus(CourseStatus status) { this.status = status; }
     public void setDurationSeconds(Integer durationSeconds) { this.durationSeconds = durationSeconds; }
+    public void setProcessingProgress(Integer processingProgress) { this.processingProgress = processingProgress; }
     public void setTranscript(String transcript) { this.transcript = transcript; }
     public void setNoteContent(String noteContent) { this.noteContent = noteContent; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }

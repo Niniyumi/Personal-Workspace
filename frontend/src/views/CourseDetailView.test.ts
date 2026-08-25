@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   loadOne: vi.fn(),
   saveNote: vi.fn(),
   retry: vi.fn(),
+  downloadNote: vi.fn(),
   store: {
     current: null as Record<string, unknown> | null,
     error: null as string | null,
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     loadOne: vi.fn(),
     saveNote: vi.fn(),
     retry: vi.fn(),
+    downloadNote: vi.fn(),
   },
 }))
 
@@ -27,11 +29,13 @@ beforeEach(() => {
   mocks.store.loadOne = mocks.loadOne
   mocks.store.saveNote = mocks.saveNote
   mocks.store.retry = mocks.retry
+  mocks.store.downloadNote = mocks.downloadNote
   mocks.store.current = {
     id: 9,
     title: 'Java 并发课',
     status: 'READY',
     durationSeconds: 120,
+    processingProgress: 100,
     transcript: '完整转写',
     noteContent: '# 原笔记',
     errorMessage: null,
@@ -39,6 +43,7 @@ beforeEach(() => {
   mocks.loadOne.mockResolvedValue(mocks.store.current)
   mocks.saveNote.mockResolvedValue(mocks.store.current)
   mocks.retry.mockResolvedValue(mocks.store.current)
+  mocks.downloadNote.mockResolvedValue(undefined)
 })
 
 describe('CourseDetailView', () => {
@@ -62,5 +67,24 @@ describe('CourseDetailView', () => {
     await wrapper.get('[data-test="retry-course"]').trigger('click')
 
     expect(mocks.retry).toHaveBeenCalledWith(9)
+  })
+
+  it('shows the real processing progress', async () => {
+    mocks.store.current = { ...mocks.store.current, status: 'PROCESSING', processingProgress: 65 }
+    mocks.loadOne.mockResolvedValue(mocks.store.current)
+
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="course-progress"]').text()).toContain('65%')
+  })
+
+  it('downloads a completed saved note', async () => {
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    await wrapper.get('[data-test="download-course-note"]').trigger('click')
+
+    expect(mocks.downloadNote).toHaveBeenCalledWith(9, 'Java 并发课')
   })
 })

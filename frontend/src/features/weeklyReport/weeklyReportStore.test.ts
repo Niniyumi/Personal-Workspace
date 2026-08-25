@@ -76,6 +76,7 @@ describe('weeklyReportStore', () => {
   })
 
   it('records request failure and always ends the loading state', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     vi.mocked(weeklyReportApi.list).mockRejectedValue(new Error('network failed'))
     const store = useWeeklyReportStore()
 
@@ -83,5 +84,6 @@ describe('weeklyReportStore', () => {
 
     expect(store.loading).toBe(false)
     expect(store.error).toBe('操作失败，请稍后重试')
+    expect(consoleError).toHaveBeenCalledWith('[weekly-report] request failed', expect.any(Object))
   })
 })

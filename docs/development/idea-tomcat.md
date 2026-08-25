@@ -34,12 +34,17 @@ Set-Location ../backend
 DB_URL=jdbc:mysql://127.0.0.1:3306/work?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
 DB_USERNAME=root
 DB_PASSWORD=<你的本机 MySQL 密码>
-JWT_SECRET=<至少 32 字节的随机密钥>
-AI_BASE_URL=<可选，OpenAI 兼容接口地址>
-AI_API_KEY=<可选，模型密钥>
-AI_MODEL=<可选，模型名称>
+JWT_SECRET=<至少 16 个字符的密钥>
+DASHSCOPE_API_KEY=<阿里云百炼 API Key>
+AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+AI_MODEL=qwen-plus
 AI_TIMEOUT_SECONDS=30
+SPEECH_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+SPEECH_MODEL=qwen3-asr-flash
+SPEECH_TIMEOUT_SECONDS=120
 ```
+
+课程录音和笔记共用一个 `DASHSCOPE_API_KEY`；缺少时课程会保留音频并在详情页明确提示，补齐后可点击“重新处理”。
 
 不要把真实密码或 JWT 密钥写进 Git 文件。可以在 PowerShell 中生成 JWT 密钥：
 

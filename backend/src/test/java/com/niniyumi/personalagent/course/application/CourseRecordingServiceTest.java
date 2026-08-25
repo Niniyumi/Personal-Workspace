@@ -114,7 +114,7 @@ class CourseRecordingServiceTest {
 
         public Course save(Course course) {
             Course saved = new Course((long) values.size() + 1, course.userId(), course.title(), course.status(),
-                    course.durationSeconds(), course.transcript(), course.noteContent(), course.errorMessage(),
+                    course.durationSeconds(), course.processingProgress(), course.transcript(), course.noteContent(), course.errorMessage(),
                     course.createdAt(), course.updatedAt());
             values.add(saved);
             return saved;

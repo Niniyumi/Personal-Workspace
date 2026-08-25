@@ -23,6 +23,12 @@ export interface RegisterInput {
   displayName: string
 }
 
+export interface ConfirmPasswordResetInput {
+  email: string
+  code: string
+  newPassword: string
+}
+
 export interface ApiError {
   code: string
   message: string

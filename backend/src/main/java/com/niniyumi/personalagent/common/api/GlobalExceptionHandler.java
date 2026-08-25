@@ -5,6 +5,7 @@ import com.niniyumi.personalagent.auth.application.CurrentUserDisabledException;
 import com.niniyumi.personalagent.auth.application.CurrentUserNotFoundException;
 import com.niniyumi.personalagent.auth.application.InvalidCredentialsException;
 import com.niniyumi.personalagent.auth.application.InvalidRefreshTokenException;
+import com.niniyumi.personalagent.auth.application.InvalidPasswordResetCodeException;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
 import com.niniyumi.personalagent.weeklyreport.application.InvalidWeekStartException;
 import com.niniyumi.personalagent.weeklyreport.application.InvalidDocxException;
@@ -19,6 +20,8 @@ import com.niniyumi.personalagent.course.application.InvalidCoursePartsException
 import com.niniyumi.personalagent.course.application.InvalidCourseStateException;
 import com.niniyumi.personalagent.course.application.InvalidCourseTitleException;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -28,6 +31,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(CurrentUserNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleCurrentUserNotFound() {
         return error(HttpStatus.NOT_FOUND, "CURRENT_USER_NOT_FOUND", "Current user not found");
@@ -56,6 +61,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidRefreshTokenException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidRefreshToken() {
         return error(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", "Invalid refresh token");
+    }
+
+    @ExceptionHandler(InvalidPasswordResetCodeException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidPasswordResetCode() {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_RESET_CODE", "Invalid or expired verification code");
     }
 
     @ExceptionHandler(WeeklyReportNotFoundException.class)
@@ -121,6 +131,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCourseStateException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidCourseState() {
         return error(HttpStatus.CONFLICT, "INVALID_COURSE_STATE", "Invalid course state");
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiErrorResponse> handleUnexpected(Exception exception) {
+        String traceId = UUID.randomUUID().toString();
+        log.error("Unhandled request exception, traceId={}", traceId, exception);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiErrorResponse("INTERNAL_ERROR", "Unexpected server error", traceId));
     }
 
     private ResponseEntity<ApiErrorResponse> error(HttpStatus status, String code, String message) {

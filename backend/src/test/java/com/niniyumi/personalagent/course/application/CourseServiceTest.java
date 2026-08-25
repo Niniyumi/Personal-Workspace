@@ -56,7 +56,7 @@ class CourseServiceTest {
         Course created = service.create(42L, "Spring Boot");
         repository.update(new Course(
                 created.id(), created.userId(), created.title(), CourseStatus.READY, 80,
-                "完整转写", "旧笔记", null, created.createdAt(), created.updatedAt()));
+                100, "完整转写", "旧笔记", null, created.createdAt(), created.updatedAt()));
 
         Course updated = service.saveNote(42L, created.id(), "  # 新笔记  ");
 
@@ -80,7 +80,7 @@ class CourseServiceTest {
             Course saved = new Course(
                     (long) courses.size() + 1,
                     course.userId(), course.title(), course.status(), course.durationSeconds(),
-                    course.transcript(), course.noteContent(), course.errorMessage(),
+                    course.processingProgress(), course.transcript(), course.noteContent(), course.errorMessage(),
                     course.createdAt(), course.updatedAt());
             courses.add(saved);
             return saved;

@@ -1,6 +1,7 @@
 package com.niniyumi.personalagent.auth.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.niniyumi.personalagent.auth.domain.User;
 import com.niniyumi.personalagent.auth.domain.UserRepository;
 import java.util.Optional;
@@ -49,5 +50,12 @@ public class MybatisUserRepository implements UserRepository {
     @Override
     public Optional<User> findById(long id) {
         return Optional.ofNullable(userMapper.selectById(id)).map(UserRow::toDomain);
+    }
+
+    @Override
+    public void updatePassword(long userId, String passwordHash) {
+        userMapper.update(null, new LambdaUpdateWrapper<UserRow>()
+                .eq(UserRow::getId, userId)
+                .set(UserRow::getPasswordHash, passwordHash));
     }
 }

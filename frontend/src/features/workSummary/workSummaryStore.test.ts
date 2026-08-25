@@ -21,6 +21,7 @@ describe('workSummaryStore', () => {
   })
 
   it('keeps the previous summary and explains an empty period', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const store = useWorkSummaryStore()
     store.summary = {
       id: 7,
@@ -44,6 +45,7 @@ describe('workSummaryStore', () => {
     expect(store.summary.coreContent).toBe('旧总结')
     expect(store.error).toBe('所选时间范围内还没有周报')
     expect(store.loading).toBe(false)
+    expect(consoleError).toHaveBeenCalledWith('[work-summary] request failed', expect.any(Object))
   })
 
   it('updates the visible summary and saving state', async () => {

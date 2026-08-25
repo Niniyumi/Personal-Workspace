@@ -8,6 +8,7 @@ import com.niniyumi.personalagent.course.domain.CourseAudioPartRepository;
 import com.niniyumi.personalagent.course.domain.CourseRepository;
 import com.niniyumi.personalagent.course.domain.CourseStatus;
 import com.niniyumi.personalagent.course.infrastructure.speech.SpeechProvider;
+import com.niniyumi.personalagent.course.infrastructure.speech.SpeechProviderException;
 import com.niniyumi.personalagent.course.infrastructure.storage.CourseAudioStorage;
 import com.niniyumi.personalagent.weeklyreport.infrastructure.ai.ChatProvider;
 import java.nio.file.Path;
@@ -29,7 +30,7 @@ class CourseProcessingServiceTest {
     @BeforeEach
     void setUp() {
         courses.value = new Course(9L, 42L, "计算机网络", CourseStatus.PROCESSING, 600,
-                null, null, null, now, now);
+                0, null, null, null, now, now);
         parts.values.add(new CourseAudioPart(1L, 9L, 1, 300, "audio/9/1.webm", 10, now));
         parts.values.add(new CourseAudioPart(2L, 9L, 2, 300, "audio/9/2.webm", 10, now));
     }
@@ -45,6 +46,8 @@ class CourseProcessingServiceTest {
         assertThat(courses.value.status()).isEqualTo(CourseStatus.READY);
         assertThat(courses.value.transcript()).isEqualTo("第一部分\n\n第二部分");
         assertThat(courses.value.noteContent()).startsWith("# 课程摘要");
+        assertThat(courses.history).extracting(Course::processingProgress)
+                .containsExactly(10, 43, 75, 85, 100);
         assertThat(parts.values).isEmpty();
         assertThat(storage.deleted).containsExactly(Path.of("audio/9/1.webm"), Path.of("audio/9/2.webm"));
     }
@@ -60,6 +63,18 @@ class CourseProcessingServiceTest {
         assertThat(courses.value.errorMessage()).isEqualTo("转写或笔记生成失败，请重新处理");
         assertThat(parts.values).hasSize(2);
         assertThat(storage.deleted).isEmpty();
+    }
+
+    @Test
+    void explainsWhenTheSpeechProviderIsNotConfigured() {
+        CourseProcessingService service = service(
+                path -> { throw new SpeechProviderException("Speech provider is not configured"); },
+                (system, user) -> "不会执行");
+
+        service.process(42L, 9L);
+
+        assertThat(courses.value.status()).isEqualTo(CourseStatus.FAILED);
+        assertThat(courses.value.errorMessage()).isEqualTo("语音识别服务未配置，请设置 DASHSCOPE_API_KEY");
     }
 
     @Test
@@ -80,8 +95,9 @@ class CourseProcessingServiceTest {
 
     private static final class MemoryCourseRepository implements CourseRepository {
         private Course value;
+        private final List<Course> history = new ArrayList<>();
         public Course save(Course course) { value = course; return course; }
-        public Course update(Course course) { value = course; return course; }
+        public Course update(Course course) { value = course; history.add(course); return course; }
         public Optional<Course> findByIdAndUserId(long id, long userId) {
             return value != null && value.id() == id && value.userId() == userId ? Optional.of(value) : Optional.empty();
         }

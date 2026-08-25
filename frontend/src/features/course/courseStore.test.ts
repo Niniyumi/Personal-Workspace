@@ -47,11 +47,29 @@ describe('courseStore', () => {
     store.reset()
     resolveList([{
       id: 1, title: '用户 A 的课程', status: 'READY', durationSeconds: 60,
+      processingProgress: 100,
       errorMessage: null, createdAt: '2026-08-24T12:00:00Z', updatedAt: '2026-08-24T12:00:00Z',
     }])
     await oldRequest
 
     expect(store.courses).toEqual([])
     expect(store.current).toBeNull()
+  })
+
+  it('logs request details when a course request fails', async () => {
+    useAuthStore().tokens = { accessToken: 'access', refreshToken: 'refresh', expiresInSeconds: 900 }
+    const failure = {
+      config: { method: 'get', url: '/courses' },
+      response: { status: 404, data: { code: 'NOT_FOUND', traceId: 'course-trace' } },
+    }
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.mocked(courseApi.list).mockRejectedValue(failure)
+
+    await expect(useCourseStore().loadAll()).rejects.toBe(failure)
+
+    expect(consoleError).toHaveBeenCalledWith('[course] request failed', {
+      method: 'GET', url: '/courses', status: 404, code: 'NOT_FOUND', traceId: 'course-trace',
+    })
+    consoleError.mockRestore()
   })
 })

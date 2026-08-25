@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.niniyumi.personalagent.auth.infrastructure.security.ApiSecurityErrorHandler;
@@ -21,6 +23,7 @@ import com.niniyumi.personalagent.course.application.CourseService;
 import com.niniyumi.personalagent.course.domain.Course;
 import com.niniyumi.personalagent.course.domain.CourseAudioPart;
 import com.niniyumi.personalagent.course.domain.CourseStatus;
+import com.niniyumi.personalagent.course.infrastructure.document.CourseDocxExporter;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -48,6 +51,9 @@ class CourseControllerTest {
 
     @MockBean
     private CourseProcessingService processingService;
+
+    @MockBean
+    private CourseDocxExporter docxExporter;
 
     @Test
     void requiresAuthenticationForCourseApis() throws Exception {
@@ -124,13 +130,25 @@ class CourseControllerTest {
         verify(processingService).processAsync(42L, 9L);
     }
 
+    @Test
+    void downloadsAnOwnedCourseNoteAsDocx() throws Exception {
+        when(courseService.get(42L, 9L)).thenReturn(course(CourseStatus.READY));
+        when(docxExporter.export(any(Course.class))).thenReturn("docx".getBytes());
+
+        mockMvc.perform(get("/api/courses/9/note.docx").with(authentication(principalAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("attachment")))
+                .andExpect(content().bytes("docx".getBytes()));
+    }
+
     private UsernamePasswordAuthenticationToken principalAuthentication() {
         return new UsernamePasswordAuthenticationToken(new AuthenticatedUser(42L, "nini"), "token", List.of());
     }
 
     private Course course(CourseStatus status) {
         return new Course(9L, 42L, "Java 并发课", status, 20,
-                "完整转写", "# 我的笔记", null,
+                status == CourseStatus.READY ? 100 : 10, "完整转写", "# 我的笔记", null,
                 Instant.parse("2026-08-24T12:00:00Z"), Instant.parse("2026-08-24T12:01:00Z"));
     }
 }

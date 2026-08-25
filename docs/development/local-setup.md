@@ -20,7 +20,7 @@ key, user password, or issued refresh token.
 ## Start the backend
 
 In PowerShell, set the local MySQL password in the current process and generate a fresh
-base64-encoded 32-byte JWT secret, then start the application:
+JWT secret containing at least 16 characters, then start the application. The command below generates a stronger value:
 
 ```powershell
 $env:DB_PASSWORD = Read-Host 'MySQL password'
@@ -49,7 +49,7 @@ DOCX extraction works without a model key. To classify extracted text into the t
 
 ```powershell
 $env:AI_BASE_URL = 'https://api.openai.com/v1'
-$env:AI_API_KEY = Read-Host 'Model API key'
+$env:DASHSCOPE_API_KEY = Read-Host 'Alibaba Cloud Model Studio API key'
 $env:AI_MODEL = 'your-model-name'
 $env:AI_TIMEOUT_SECONDS = '30'
 ```

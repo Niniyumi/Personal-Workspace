@@ -7,5 +7,5 @@ public interface PasswordResetCodeRepository {
     PasswordResetCode save(PasswordResetCode code);
     Optional<PasswordResetCode> findLatestByUserId(long userId);
     void deleteAllByUserId(long userId);
-    void markUsed(long id, Instant usedAt);
+    boolean markUsedIfValid(long id, Instant usedAt);
 }

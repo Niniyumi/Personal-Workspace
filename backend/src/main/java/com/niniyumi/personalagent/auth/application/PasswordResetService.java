@@ -2,6 +2,7 @@ package com.niniyumi.personalagent.auth.application;
 
 import com.niniyumi.personalagent.auth.domain.PasswordResetCode;
 import com.niniyumi.personalagent.auth.domain.PasswordResetCodeRepository;
+import com.niniyumi.personalagent.auth.domain.RefreshSessionRepository;
 import com.niniyumi.personalagent.auth.domain.User;
 import com.niniyumi.personalagent.auth.domain.UserRepository;
 import java.nio.charset.StandardCharsets;
@@ -19,16 +20,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class PasswordResetService {
     private final UserRepository users;
     private final PasswordResetCodeRepository codes;
+    private final RefreshSessionRepository refreshSessions;
     private final PasswordResetMailSender mailSender;
     private final VerificationCodeGenerator codeGenerator;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
     public PasswordResetService(UserRepository users, PasswordResetCodeRepository codes,
+            RefreshSessionRepository refreshSessions,
             PasswordResetMailSender mailSender, VerificationCodeGenerator codeGenerator,
             PasswordEncoder passwordEncoder, Clock clock) {
         this.users = users;
         this.codes = codes;
+        this.refreshSessions = refreshSessions;
         this.mailSender = mailSender;
         this.codeGenerator = codeGenerator;
         this.passwordEncoder = passwordEncoder;
@@ -51,14 +55,18 @@ public class PasswordResetService {
     public void confirm(String rawEmail, String code, String newPassword) {
         User user = users.findByUsernameOrEmail(normalize(rawEmail))
                 .orElseThrow(InvalidPasswordResetCodeException::new);
+        Instant now = clock.instant();
         PasswordResetCode latest = codes.findLatestByUserId(user.id())
-                .filter(saved -> saved.isValidAt(clock.instant()))
+                .filter(saved -> saved.isValidAt(now))
                 .filter(saved -> MessageDigest.isEqual(
                         saved.codeHash().getBytes(StandardCharsets.UTF_8),
                         hash(code).getBytes(StandardCharsets.UTF_8)))
                 .orElseThrow(InvalidPasswordResetCodeException::new);
+        if (!codes.markUsedIfValid(latest.id(), now)) {
+            throw new InvalidPasswordResetCodeException();
+        }
         users.updatePassword(user.id(), passwordEncoder.encode(newPassword));
-        codes.markUsed(latest.id(), clock.instant());
+        refreshSessions.revokeAllActiveByUserId(user.id(), now);
     }
 
     private String normalize(String email) {

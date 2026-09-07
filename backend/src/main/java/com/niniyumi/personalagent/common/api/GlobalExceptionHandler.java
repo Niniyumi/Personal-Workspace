@@ -6,6 +6,7 @@ import com.niniyumi.personalagent.auth.application.CurrentUserNotFoundException;
 import com.niniyumi.personalagent.auth.application.InvalidCredentialsException;
 import com.niniyumi.personalagent.auth.application.InvalidRefreshTokenException;
 import com.niniyumi.personalagent.auth.application.InvalidPasswordResetCodeException;
+import com.niniyumi.personalagent.auth.application.InvalidRegistrationVerificationCodeException;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
 import com.niniyumi.personalagent.weeklyreport.application.InvalidWeekStartException;
 import com.niniyumi.personalagent.weeklyreport.application.InvalidDocxException;
@@ -66,6 +67,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidPasswordResetCodeException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidPasswordResetCode() {
         return error(HttpStatus.BAD_REQUEST, "INVALID_RESET_CODE", "Invalid or expired verification code");
+    }
+
+    @ExceptionHandler(InvalidRegistrationVerificationCodeException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidRegistrationVerificationCode() {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_REGISTRATION_CODE", "Invalid or expired verification code");
     }
 
     @ExceptionHandler(WeeklyReportNotFoundException.class)

@@ -1,6 +1,6 @@
 # IDEA + Tomcat 本地部署
 
-本项目开发时仍推荐分别运行 Vite 和 Spring Boot。需要按传统 Web 项目演示时，再使用本页的 WAR 部署方式。当前项目要求 Java 21 与 Tomcat 10.1。
+本项目开发时仍推荐分别运行 Vite 和 Spring Boot。需要按传统 Web 项目演示时，再使用本页的 WAR 部署方式。当前项目要求 Java 17 与 Tomcat 10.1。
 
 ## 1. 构建前端和 WAR
 
@@ -21,7 +21,7 @@ Set-Location ../backend
 
 1. 点击 `+`，选择 `Tomcat Server | Local`。
 2. `Application server` 选择 Tomcat 10.1 安装目录，例如 `D:\software\apache-tomcat-10.1.56`。
-3. `JRE` 选择 Java 21。
+3. `JRE` 选择 Java 17。
 4. 在 `Deployment` 页点击 `+`，选择 `Artifact`，添加 `personal-agent:war exploded`；如果 IDEA 尚未识别 Artifact，可先执行 Maven `package`，再重新导入 `backend/pom.xml`。
 5. 将 `Application context` 设置为 `/`，这样网页地址是 `http://localhost:8080/`。
 6. `On Update action` 和 `On frame deactivation` 都选择 `Update classes and resources`，便于调试期间更新静态资源和 Java 类。

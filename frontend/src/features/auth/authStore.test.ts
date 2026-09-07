@@ -8,6 +8,7 @@ import type { AuthTokens, User } from './types'
 vi.mock('./authApi', () => ({
   authApi: {
     register: vi.fn(),
+    requestRegistrationCode: vi.fn(),
     login: vi.fn(),
     currentUser: vi.fn(),
     refresh: vi.fn(),
@@ -111,11 +112,22 @@ describe('authStore', () => {
       email: 'nini@example.com',
       password: 'UnitTest7!',
       displayName: 'Nini',
+      code: '123456',
     })
 
     expect(result).toEqual(user)
     expect(store.status).toBe('anonymous')
     expect(tokenStorage.read()).toBeNull()
+  })
+
+  it('requests a registration code without changing login state', async () => {
+    vi.mocked(authApi.requestRegistrationCode).mockResolvedValue(undefined)
+    const store = useAuthStore()
+
+    await store.requestRegistrationCode('nini@example.com')
+
+    expect(authApi.requestRegistrationCode).toHaveBeenCalledWith('nini@example.com')
+    expect(store.status).toBe('idle')
   })
 
   it('logs the original error when registration fails', async () => {
@@ -135,6 +147,7 @@ describe('authStore', () => {
       email: 'nini@example.com',
       password: 'UnitTest7!',
       displayName: 'Nini',
+      code: '123456',
     })).rejects.toBe(failure)
 
     expect(consoleError).toHaveBeenCalledWith('[auth] register failed', {

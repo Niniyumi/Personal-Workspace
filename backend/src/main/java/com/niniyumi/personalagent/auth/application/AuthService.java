@@ -20,13 +20,16 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final JwtTokenService jwtTokenService;
+    private final RegistrationVerificationService registrationVerificationService;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       RefreshTokenService refreshTokenService, JwtTokenService jwtTokenService) {
+                       RefreshTokenService refreshTokenService, JwtTokenService jwtTokenService,
+                       RegistrationVerificationService registrationVerificationService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenService = refreshTokenService;
         this.jwtTokenService = jwtTokenService;
+        this.registrationVerificationService = registrationVerificationService;
     }
 
     @Transactional
@@ -41,6 +44,7 @@ public class AuthService {
         if (userRepository.existsByEmail(email)) {
             throw new EmailAlreadyExistsException();
         }
+        registrationVerificationService.consume(email, command.code());
         try {
             return userRepository.save(new User(null, username, email,
                     passwordEncoder.encode(command.password()), command.displayName().trim(),

@@ -28,6 +28,7 @@ public class MybatisPasswordResetCodeRepository implements PasswordResetCodeRepo
         return Optional.ofNullable(mapper.selectOne(new LambdaQueryWrapper<PasswordResetCodeRow>()
                 .eq(PasswordResetCodeRow::getUserId, userId)
                 .orderByDesc(PasswordResetCodeRow::getCreatedAt)
+                .orderByDesc(PasswordResetCodeRow::getId)
                 .last("LIMIT 1"))).map(PasswordResetCodeRow::toDomain);
     }
 
@@ -38,9 +39,11 @@ public class MybatisPasswordResetCodeRepository implements PasswordResetCodeRepo
     }
 
     @Override
-    public void markUsed(long id, Instant usedAt) {
-        mapper.update(null, new LambdaUpdateWrapper<PasswordResetCodeRow>()
+    public boolean markUsedIfValid(long id, Instant usedAt) {
+        return mapper.update(null, new LambdaUpdateWrapper<PasswordResetCodeRow>()
                 .eq(PasswordResetCodeRow::getId, id)
-                .set(PasswordResetCodeRow::getUsedAt, usedAt));
+                .isNull(PasswordResetCodeRow::getUsedAt)
+                .gt(PasswordResetCodeRow::getExpiresAt, usedAt)
+                .set(PasswordResetCodeRow::getUsedAt, usedAt)) == 1;
     }
 }

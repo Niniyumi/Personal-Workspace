@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Java 21
+- Java 17
 - MySQL 8 running locally, with a database named `work`
 
 ## Protect the existing database
@@ -40,7 +40,7 @@ Set-Location backend
 registration but makes JWT issuance fail during login.
 
 The file is intentionally excluded from Maven resources, so it cannot enter the WAR. The variables apply only to the current PowerShell process. Keep the terminal open while the
-application runs. On a successful start, Flyway reports schema version `2` and Spring
+application runs. On a successful start, Flyway reports schema version `6` and Spring
 Boot listens on port `8080`.
 
 ## Optional model provider
@@ -86,11 +86,14 @@ With the backend running, use a second PowerShell terminal. Choose a unique user
 email, and keep the chosen password only in that terminal session. Exercise these
 endpoints in order:
 
-1. `POST /api/auth/register`
-2. `POST /api/auth/login`
-3. `GET /api/users/me` with the returned access token
-4. `POST /api/auth/refresh` with the returned refresh token
-5. `POST /api/auth/logout` with the refreshed refresh token
+1. `POST /api/auth/registration-code/request`
+2. Read the registration code from the test mailbox, then `POST /api/auth/register`
+3. `POST /api/auth/login`
+4. `GET /api/users/me` with the returned access token
+5. `POST /api/auth/password-reset/request`
+6. Read the reset code from the test mailbox, then `POST /api/auth/password-reset/confirm`
+7. Log in with the new password and confirm that the old refresh token is rejected
+8. `POST /api/auth/logout` with the current refresh token
 
 Expected results are a created user, token pairs from login and refresh, the current user
 from `/api/users/me`, and HTTP `204 No Content` from logout. Reusing the logged-out

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niniyumi.personalagent.auth.application.AuthService;
 import com.niniyumi.personalagent.auth.application.PasswordResetService;
 import com.niniyumi.personalagent.auth.application.RefreshTokenService;
+import com.niniyumi.personalagent.auth.application.RegistrationVerificationService;
 import com.niniyumi.personalagent.auth.domain.User;
 import com.niniyumi.personalagent.auth.domain.UserRepository;
 import com.niniyumi.personalagent.auth.infrastructure.security.JwtProperties;
@@ -55,6 +56,9 @@ class PasswordValidationTest {
     @MockBean
     private PasswordResetService passwordResetService;
 
+    @MockBean
+    private RegistrationVerificationService registrationVerificationService;
+
     @ParameterizedTest
     @MethodSource("validBoundaryPasswords")
     void registerAcceptsPasswordsAtSeventyTwoUtf8Bytes(String password) throws Exception {
@@ -98,7 +102,8 @@ class PasswordValidationTest {
                 "username", "nini",
                 "email", "nini@example.com",
                 "password", password,
-                "displayName", "Nini"));
+                "displayName", "Nini",
+                "code", "123456"));
     }
 
     private static Stream<String> validBoundaryPasswords() {

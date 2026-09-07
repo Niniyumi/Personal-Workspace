@@ -39,4 +39,13 @@ public class MybatisRefreshSessionRepository implements RefreshSessionRepository
                 .gt(RefreshSessionRow::getExpiresAt, revokedAt)
                 .set(RefreshSessionRow::getRevokedAt, revokedAt)) == 1;
     }
+
+    @Override
+    public int revokeAllActiveByUserId(long userId, Instant revokedAt) {
+        return refreshSessionMapper.update(null, new LambdaUpdateWrapper<RefreshSessionRow>()
+                .eq(RefreshSessionRow::getUserId, userId)
+                .isNull(RefreshSessionRow::getRevokedAt)
+                .gt(RefreshSessionRow::getExpiresAt, revokedAt)
+                .set(RefreshSessionRow::getRevokedAt, revokedAt));
+    }
 }

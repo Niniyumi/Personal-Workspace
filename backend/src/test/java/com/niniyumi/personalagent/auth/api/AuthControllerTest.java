@@ -2,6 +2,7 @@ package com.niniyumi.personalagent.auth.api;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,9 +11,11 @@ import com.niniyumi.personalagent.auth.application.AuthService;
 import com.niniyumi.personalagent.auth.application.PasswordResetService;
 import com.niniyumi.personalagent.auth.application.InvalidCredentialsException;
 import com.niniyumi.personalagent.auth.application.InvalidRefreshTokenException;
+import com.niniyumi.personalagent.auth.application.InvalidRegistrationVerificationCodeException;
 import com.niniyumi.personalagent.auth.application.LoginCommand;
 import com.niniyumi.personalagent.auth.application.LoginResult;
 import com.niniyumi.personalagent.auth.application.RegisterCommand;
+import com.niniyumi.personalagent.auth.application.RegistrationVerificationService;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
 import com.niniyumi.personalagent.auth.domain.User;
 import com.niniyumi.personalagent.auth.domain.UserStatus;
@@ -41,6 +44,9 @@ class AuthControllerTest {
     @MockBean
     private PasswordResetService passwordResetService;
 
+    @MockBean
+    private RegistrationVerificationService registrationVerificationService;
+
     @BeforeEach
     void setUp() {
         when(jwtProperties.accessTokenMinutes()).thenReturn(23L);
@@ -54,11 +60,23 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"nini","email":"nini@example.com",
-                                 "password":"UnitTest7!","displayName":"Nini"}
+                                 "password":"UnitTest7!","displayName":"Nini","code":"123456"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(42))
                 .andExpect(jsonPath("$.username").value("nini"));
+    }
+
+    @Test
+    void requestsRegistrationCodeForEmail() throws Exception {
+        mockMvc.perform(post("/api/auth/registration-code/request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"nini@example.com"}
+                                """))
+                .andExpect(status().isNoContent());
+
+        verify(registrationVerificationService).request("nini@example.com");
     }
 
     @Test
@@ -77,7 +95,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"nini@example.com","email":"nini@example.com",
-                                 "password":"UnitTest7!","displayName":"Nini"}
+                                 "password":"UnitTest7!","displayName":"Nini","code":"123456"}
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
@@ -91,10 +109,25 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"nini","email":"nini@example.com",
-                                 "password":"UnitTest7!","displayName":"Nini"}
+                                 "password":"UnitTest7!","displayName":"Nini","code":"123456"}
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("USERNAME_EXISTS"));
+    }
+
+    @Test
+    void registerMapsInvalidVerificationCodeToBadRequest() throws Exception {
+        when(authService.register(any(RegisterCommand.class)))
+                .thenThrow(new InvalidRegistrationVerificationCodeException());
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"nini","email":"nini@example.com",
+                                 "password":"UnitTest7!","displayName":"Nini","code":"654321"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REGISTRATION_CODE"));
     }
 
     @Test

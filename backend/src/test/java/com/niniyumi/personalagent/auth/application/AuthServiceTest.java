@@ -39,13 +39,17 @@ class AuthServiceTest {
     @Mock
     private JwtTokenService jwtTokenService;
 
+    @Mock
+    private RegistrationVerificationService registrationVerificationService;
+
     private AuthService service;
     private RegisterCommand command;
 
     @BeforeEach
     void setUp() {
-        service = new AuthService(userRepository, passwordEncoder, refreshTokenService, jwtTokenService);
-        command = new RegisterCommand("nini", "nini@example.com", "UnitTest7!", "Nini");
+        service = new AuthService(userRepository, passwordEncoder, refreshTokenService, jwtTokenService,
+                registrationVerificationService);
+        command = new RegisterCommand("nini", "nini@example.com", "UnitTest7!", "Nini", "123456");
     }
 
     @Test
@@ -63,6 +67,7 @@ class AuthServiceTest {
         verify(userRepository).existsByUsername("nini");
         verify(userRepository).existsByEmail("nini@example.com");
         verify(userRepository).save(any());
+        verify(registrationVerificationService).consume("nini@example.com", "123456");
         verifyNoMoreInteractions(userRepository);
     }
 

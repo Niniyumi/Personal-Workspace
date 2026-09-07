@@ -21,6 +21,7 @@ export interface RegisterInput {
   email: string
   password: string
   displayName: string
+  code: string
 }
 
 export interface ConfirmPasswordResetInput {

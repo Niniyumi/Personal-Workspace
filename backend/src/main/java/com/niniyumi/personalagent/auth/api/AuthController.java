@@ -7,8 +7,10 @@ import com.niniyumi.personalagent.auth.api.dto.RefreshRequest;
 import com.niniyumi.personalagent.auth.api.dto.UserResponse;
 import com.niniyumi.personalagent.auth.api.dto.PasswordResetRequest;
 import com.niniyumi.personalagent.auth.api.dto.PasswordResetConfirmRequest;
+import com.niniyumi.personalagent.auth.api.dto.RegistrationVerificationRequest;
 import com.niniyumi.personalagent.auth.application.AuthService;
 import com.niniyumi.personalagent.auth.application.PasswordResetService;
+import com.niniyumi.personalagent.auth.application.RegistrationVerificationService;
 import com.niniyumi.personalagent.auth.application.RegisterCommand;
 import com.niniyumi.personalagent.auth.application.LoginCommand;
 import com.niniyumi.personalagent.auth.application.LoginResult;
@@ -28,20 +30,30 @@ public class AuthController {
     private final AuthService authService;
     private final JwtProperties jwtProperties;
     private final PasswordResetService passwordResetService;
+    private final RegistrationVerificationService registrationVerificationService;
 
     public AuthController(AuthService authService, JwtProperties jwtProperties,
-            PasswordResetService passwordResetService) {
+            PasswordResetService passwordResetService,
+            RegistrationVerificationService registrationVerificationService) {
         this.authService = authService;
         this.jwtProperties = jwtProperties;
         this.passwordResetService = passwordResetService;
+        this.registrationVerificationService = registrationVerificationService;
     }
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
         User user = authService.register(new RegisterCommand(
-                request.username(), request.email(), request.password(), request.displayName()));
+                request.username(), request.email(), request.password(), request.displayName(), request.code()));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new UserResponse(user.id(), user.username(), user.email(), user.displayName()));
+    }
+
+    @PostMapping("/registration-code/request")
+    public ResponseEntity<Void> requestRegistrationCode(
+            @Valid @RequestBody RegistrationVerificationRequest request) {
+        registrationVerificationService.request(request.email());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/login")

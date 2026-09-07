@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   login: vi.fn(),
   register: vi.fn(),
+  requestRegistrationCode: vi.fn(),
   logout: vi.fn(),
   store: {
     status: 'anonymous',
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => ({
     user: null as null | { id: number; username: string; email: string; displayName: string },
     login: vi.fn(),
     register: vi.fn(),
+    requestRegistrationCode: vi.fn(),
     logout: vi.fn(),
   },
 }))
@@ -41,6 +43,7 @@ beforeEach(() => {
   mocks.store.user = null
   mocks.store.login = mocks.login
   mocks.store.register = mocks.register
+  mocks.store.requestRegistrationCode = mocks.requestRegistrationCode
   mocks.store.logout = mocks.logout
 })
 
@@ -81,6 +84,7 @@ describe('RegisterView', () => {
     await wrapper.get('#email').setValue('nini@example.com')
     await wrapper.get('#displayName').setValue('Nini')
     await wrapper.get('#password').setValue('UnitTest7!')
+    await wrapper.get('#code').setValue('123456')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
 
@@ -89,8 +93,21 @@ describe('RegisterView', () => {
       email: 'nini@example.com',
       displayName: 'Nini',
       password: 'UnitTest7!',
+      code: '123456',
     })
     expect(mocks.push).toHaveBeenCalledWith({ name: 'login', query: { registered: '1' } })
+  })
+
+  it('requests a verification code for the current email', async () => {
+    mocks.requestRegistrationCode.mockResolvedValue(undefined)
+    const wrapper = mount(RegisterView, { global })
+
+    await wrapper.get('#email').setValue('nini@example.com')
+    await wrapper.get('[data-test="send-registration-code"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.requestRegistrationCode).toHaveBeenCalledWith('nini@example.com')
+    expect(wrapper.text()).toContain('验证码已发送')
   })
 })
 

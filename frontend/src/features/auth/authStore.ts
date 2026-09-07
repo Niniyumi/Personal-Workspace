@@ -30,6 +30,8 @@ function userMessage(error: unknown): string {
       return '该用户名已被使用'
     case 'EMAIL_EXISTS':
       return '该邮箱已被使用'
+    case 'INVALID_REGISTRATION_CODE':
+      return '验证码无效或已过期'
     case 'VALIDATION_ERROR':
       return '请检查输入内容'
     default:
@@ -120,6 +122,17 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         logAuthError('register', error)
         this.status = 'anonymous'
+        this.error = userMessage(error)
+        throw error
+      }
+    },
+
+    async requestRegistrationCode(email: string): Promise<void> {
+      this.error = null
+      try {
+        await authApi.requestRegistrationCode(email)
+      } catch (error) {
+        logAuthError('request registration code', error)
         this.error = userMessage(error)
         throw error
       }

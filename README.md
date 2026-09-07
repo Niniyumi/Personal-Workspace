@@ -20,7 +20,7 @@ and course recording-to-notes are implemented.
 
 ## Architecture
 
-- Java 21 and Spring Boot 3 modular monolith
+- Java 17 and Spring Boot 3 modular monolith
 - Vue 3, TypeScript, and Vite
 - MySQL 8 with Flyway
 - MyBatis-Plus

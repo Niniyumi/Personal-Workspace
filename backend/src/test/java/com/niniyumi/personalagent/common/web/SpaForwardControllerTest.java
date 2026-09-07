@@ -22,6 +22,10 @@ class SpaForwardControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(forwardedUrl("/index.html"));
 
+        mockMvc.perform(get("/forgot-password"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+
         mockMvc.perform(get("/weekly-reports/42"))
                 .andExpect(status().isOk())
                 .andExpect(forwardedUrl("/index.html"));

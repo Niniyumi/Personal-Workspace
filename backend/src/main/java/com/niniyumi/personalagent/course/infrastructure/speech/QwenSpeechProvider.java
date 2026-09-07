@@ -52,11 +52,11 @@ public class QwenSpeechProvider implements SpeechProvider {
                     .retrieve()
                     .body(QwenResponse.class);
             if (response == null || response.choices() == null || response.choices().isEmpty()
-                    || response.choices().getFirst().message() == null
-                    || blank(response.choices().getFirst().message().content())) {
+                    || response.choices().get(0).message() == null
+                    || blank(response.choices().get(0).message().content())) {
                 throw new SpeechProviderException("Speech provider returned no text");
             }
-            return response.choices().getFirst().message().content().trim();
+            return response.choices().get(0).message().content().trim();
         } catch (IOException | RestClientException exception) {
             throw new SpeechProviderException("Speech provider request failed", exception);
         }

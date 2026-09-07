@@ -48,11 +48,11 @@ public class OpenAiCompatibleChatProvider implements ChatProvider {
                     .retrieve()
                     .body(ChatCompletionResponse.class);
             if (response == null || response.choices() == null || response.choices().isEmpty()
-                    || response.choices().getFirst().message() == null
-                    || isBlank(response.choices().getFirst().message().content())) {
+                    || response.choices().get(0).message() == null
+                    || isBlank(response.choices().get(0).message().content())) {
                 throw new AiProviderException("AI provider returned no content");
             }
-            return response.choices().getFirst().message().content();
+            return response.choices().get(0).message().content();
         } catch (RestClientException exception) {
             throw new AiProviderException("AI provider request failed", exception);
         }

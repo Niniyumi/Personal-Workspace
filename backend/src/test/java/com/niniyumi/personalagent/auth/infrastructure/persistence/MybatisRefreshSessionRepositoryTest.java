@@ -48,4 +48,18 @@ class MybatisRefreshSessionRepositoryTest {
 
         assertThat(repository.revokeIfActive(42L, Instant.parse("2026-08-23T08:00:00Z"))).isFalse();
     }
+
+    @Test
+    void revokeAllActiveByUserIdTargetsOnlyTheUsersActiveSessions() {
+        Instant now = Instant.parse("2026-08-23T08:00:00Z");
+        when(mapper.update(isNull(), any(LambdaUpdateWrapper.class))).thenReturn(2);
+        MybatisRefreshSessionRepository repository = new MybatisRefreshSessionRepository(mapper);
+
+        assertThat(repository.revokeAllActiveByUserId(42L, now)).isEqualTo(2);
+
+        ArgumentCaptor<LambdaUpdateWrapper<RefreshSessionRow>> update = ArgumentCaptor.forClass(LambdaUpdateWrapper.class);
+        org.mockito.Mockito.verify(mapper).update(isNull(), update.capture());
+        assertThat(update.getValue().getSqlSet()).contains("revoked_at");
+        assertThat(update.getValue().getSqlSegment()).contains("user_id", "revoked_at IS NULL", "expires_at >");
+    }
 }

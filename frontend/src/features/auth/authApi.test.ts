@@ -27,11 +27,18 @@ describe('authApi', () => {
       email: 'nini@example.com',
       password: 'UnitTest7!',
       displayName: 'Nini',
+      code: '123456',
     }
     const user = { id: 42, username: 'nini', email: 'nini@example.com', displayName: 'Nini' }
     mock.onPost('/auth/register', input).reply(201, user)
 
     await expect(api.register(input)).resolves.toEqual(user)
+  })
+
+  it('requests a registration code for the email', async () => {
+    mock.onPost('/auth/registration-code/request', { email: 'nini@example.com' }).reply(204)
+
+    await expect(api.requestRegistrationCode('nini@example.com')).resolves.toBeUndefined()
   })
 
   it('uses the bearer token to load the current user', async () => {

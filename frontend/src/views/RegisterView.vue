@@ -10,7 +10,23 @@ const username = ref('')
 const email = ref('')
 const displayName = ref('')
 const password = ref('')
+const code = ref('')
+const sendingCode = ref(false)
+const codeSent = ref(false)
 const pending = computed(() => store.status === 'loading')
+
+async function requestCode() {
+  sendingCode.value = true
+  codeSent.value = false
+  try {
+    await store.requestRegistrationCode(email.value.trim())
+    codeSent.value = true
+  } catch {
+    // Store 已提供用户可读错误。
+  } finally {
+    sendingCode.value = false
+  }
+}
 
 async function submit() {
   try {
@@ -19,6 +35,7 @@ async function submit() {
       email: email.value.trim(),
       displayName: displayName.value.trim(),
       password: password.value,
+      code: code.value.trim(),
     })
     await router.push({ name: 'login', query: { registered: '1' } })
   } catch {
@@ -42,7 +59,23 @@ async function submit() {
       </div>
       <div class="field">
         <label for="email">邮箱</label>
-        <input id="email" v-model.trim="email" name="email" type="email" autocomplete="email" maxlength="255" required />
+        <div class="verification-request-row">
+          <input id="email" v-model.trim="email" name="email" type="email" autocomplete="email" maxlength="255" required @input="codeSent = false" />
+          <button
+            class="code-button"
+            data-test="send-registration-code"
+            type="button"
+            :disabled="sendingCode || email.trim() === ''"
+            @click="requestCode"
+          >
+            {{ sendingCode ? '发送中…' : '发送验证码' }}
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="code">邮箱验证码</label>
+        <input id="code" v-model="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required />
+        <small v-if="codeSent" role="status" aria-live="polite">验证码已发送，10 分钟内有效。</small>
       </div>
       <div class="field">
         <label for="password">密码</label>

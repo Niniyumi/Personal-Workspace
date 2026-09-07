@@ -10,5 +10,6 @@ public record RegisterRequest(
         @NotBlank @Size(min = 3, max = 50) @Pattern(regexp = "^[^@]+$", message = "Username must not contain '@'") String username,
         @NotBlank @Email @Size(max = 255) String email,
         @NotBlank @Size(min = 8) @Utf8ByteLength(max = 72) String password,
-        @NotBlank @Size(max = 80) String displayName) {
+        @NotBlank @Size(max = 80) String displayName,
+        @NotBlank @Pattern(regexp = "^\\d{6}$") String code) {
 }

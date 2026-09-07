@@ -8,6 +8,10 @@ export function createAuthApi(client: AxiosInstance) {
       return response.data
     },
 
+    async requestRegistrationCode(email: string): Promise<void> {
+      await client.post('/auth/registration-code/request', { email })
+    },
+
     async login(input: LoginInput): Promise<AuthTokens> {
       const response = await client.post<AuthTokens>('/auth/login', input)
       return response.data

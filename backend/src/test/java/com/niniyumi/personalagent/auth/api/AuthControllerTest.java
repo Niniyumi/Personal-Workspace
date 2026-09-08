@@ -3,6 +3,7 @@ package com.niniyumi.personalagent.auth.api;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -17,6 +18,7 @@ import com.niniyumi.personalagent.auth.application.LoginResult;
 import com.niniyumi.personalagent.auth.application.RegisterCommand;
 import com.niniyumi.personalagent.auth.application.RegistrationVerificationService;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
+import com.niniyumi.personalagent.auth.application.VerificationMailSendException;
 import com.niniyumi.personalagent.auth.domain.User;
 import com.niniyumi.personalagent.auth.domain.UserStatus;
 import com.niniyumi.personalagent.auth.infrastructure.security.JwtProperties;
@@ -77,6 +79,28 @@ class AuthControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(registrationVerificationService).request("nini@example.com");
+    }
+
+    @Test
+    void mapsRegistrationMailFailureThroughTheRealMvcExceptionHandler() throws Exception {
+        doThrow(new VerificationMailSendException(new IllegalStateException("smtp unavailable")))
+                .when(registrationVerificationService).request("nini@example.com");
+
+        mockMvc.perform(post("/api/auth/registration-code/request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"nini@example.com\"}"))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.code").value("VERIFICATION_MAIL_SEND_FAILED"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+    }
+
+    @Test
+    void malformedJsonIsReportedAsAClientValidationError() throws Exception {
+        mockMvc.perform(post("/api/auth/registration-code/request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @Test

@@ -59,8 +59,7 @@ public class WeeklyReportAiService {
             return new GeneratedWorkSummary(coreContent, routineWork, parsed.selfScore());
         } catch (AiProviderException | JsonProcessingException | IllegalArgumentException exception) {
             // 汇总失败时不覆盖旧总结，交由接口明确提示用户稍后重试。
-            log.error("Work summary generation failed: {}", exception.getMessage());
-            throw new SummaryGenerationException();
+            throw new SummaryGenerationException(exception);
         }
     }
 

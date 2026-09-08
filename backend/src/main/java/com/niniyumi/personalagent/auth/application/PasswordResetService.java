@@ -12,12 +12,15 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PasswordResetService {
+    private static final Logger log = LoggerFactory.getLogger(PasswordResetService.class);
     private final UserRepository users;
     private final PasswordResetCodeRepository codes;
     private final RefreshSessionRepository refreshSessions;
@@ -43,7 +46,10 @@ public class PasswordResetService {
     public void request(String rawEmail) {
         String email = normalize(rawEmail);
         User user = users.findByUsernameOrEmail(email).orElse(null);
-        if (user == null) return;
+        if (user == null) {
+            log.info("Password reset email skipped because no user matched, recipient={}", mask(email));
+            return;
+        }
         codes.deleteAllByUserId(user.id());
         String code = codeGenerator.generate();
         Instant now = clock.instant();
@@ -71,6 +77,12 @@ public class PasswordResetService {
 
     private String normalize(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String mask(String email) {
+        int at = email.indexOf('@');
+        if (at <= 0) return "***";
+        return email.substring(0, Math.min(2, at)) + "***" + email.substring(at);
     }
 
     private String hash(String value) {

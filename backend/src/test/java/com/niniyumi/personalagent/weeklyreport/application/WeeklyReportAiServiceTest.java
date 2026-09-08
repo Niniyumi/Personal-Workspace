@@ -67,15 +67,16 @@ class WeeklyReportAiServiceTest {
     }
 
     @Test
-    void invalidSummaryDoesNotFallBackOrOverwriteSavedContent(CapturedOutput output) {
-        ChatProvider provider = (system, user) -> """
-                {"coreContent":"关键项目交付","routineWork":"日常维护","selfScore":120}
-                """;
+    void providerFailureIsPreservedAsTheSummaryFailureCause() {
+        AiProviderException failure = new AiProviderException("provider unavailable");
+        ChatProvider provider = (system, user) -> {
+            throw failure;
+        };
         WeeklyReportAiService service = new WeeklyReportAiService(provider, new ObjectMapper());
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.generateSummary(List.of(report())))
-                .isInstanceOf(SummaryGenerationException.class);
-        assertThat(output).contains("Work summary generation failed");
+                .isInstanceOf(SummaryGenerationException.class)
+                .hasCause(failure);
     }
 
     private WeeklyReport report() {

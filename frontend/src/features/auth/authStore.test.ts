@@ -130,6 +130,18 @@ describe('authStore', () => {
     expect(store.status).toBe('idle')
   })
 
+  it('shows an actionable message when registration email cannot be sent', async () => {
+    const failure = {
+      response: { data: { code: 'VERIFICATION_MAIL_SEND_FAILED' } },
+    }
+    vi.mocked(authApi.requestRegistrationCode).mockRejectedValue(failure)
+    const store = useAuthStore()
+
+    await expect(store.requestRegistrationCode('nini@example.com')).rejects.toBe(failure)
+
+    expect(store.error).toBe('验证码发送失败，请稍后重试；仍失败请联系管理员')
+  })
+
   it('logs the original error when registration fails', async () => {
     const failure = {
       response: {

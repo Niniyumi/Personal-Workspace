@@ -32,6 +32,8 @@ function userMessage(error: unknown): string {
       return '该邮箱已被使用'
     case 'INVALID_REGISTRATION_CODE':
       return '验证码无效或已过期'
+    case 'VERIFICATION_MAIL_SEND_FAILED':
+      return '验证码发送失败，请稍后重试；仍失败请联系管理员'
     case 'VALIDATION_ERROR':
       return '请检查输入内容'
     default:

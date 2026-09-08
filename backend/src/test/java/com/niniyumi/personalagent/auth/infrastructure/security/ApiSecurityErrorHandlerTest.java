@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niniyumi.personalagent.common.api.ApiErrorResponse;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
@@ -13,9 +15,15 @@ class ApiSecurityErrorHandlerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ApiSecurityErrorHandler handler = new ApiSecurityErrorHandler(objectMapper);
 
+    @AfterEach
+    void clearTraceContext() {
+        MDC.clear();
+    }
+
     @Test
     void accessDeniedProducesStructuredForbiddenResponseWithoutExceptionDetails() throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
+        MDC.put("traceId", "trace-security-test");
 
         handler.handle(new MockHttpServletRequest(), response, new AccessDeniedException("sensitive detail"));
 
@@ -24,7 +32,7 @@ class ApiSecurityErrorHandlerTest {
         assertThat(response.getContentType()).isEqualTo("application/json");
         assertThat(error.code()).isEqualTo("FORBIDDEN");
         assertThat(error.message()).isEqualTo("Access is denied");
-        assertThat(error.traceId()).isNotBlank();
+        assertThat(error.traceId()).isEqualTo("trace-security-test");
         assertThat(response.getContentAsString()).doesNotContain("sensitive detail");
     }
 }

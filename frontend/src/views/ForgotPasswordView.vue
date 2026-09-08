@@ -27,7 +27,7 @@ async function submit() {
     if (step.value === 'email') {
       await authApi.requestPasswordReset(email.value.trim())
       step.value = 'code'
-      notice.value = '如果该邮箱已注册，验证码已经发送。'
+      notice.value = '如果该邮箱已注册，验证码已经发送；请检查收件箱和垃圾邮件。'
       return
     }
     await authApi.confirmPasswordReset({
@@ -39,7 +39,13 @@ async function submit() {
     const responseCode = axios.isAxiosError(cause)
       ? (cause.response?.data as { code?: string } | undefined)?.code
       : undefined
-    error.value = responseCode === 'INVALID_RESET_CODE' ? '验证码错误或已过期' : '操作失败，请稍后重试'
+    if (responseCode === 'INVALID_RESET_CODE') {
+      error.value = '验证码错误或已过期'
+    } else if (responseCode === 'VERIFICATION_MAIL_SEND_FAILED') {
+      error.value = '验证码发送失败，请稍后重试；仍失败请联系管理员'
+    } else {
+      error.value = '操作失败，请稍后重试'
+    }
   } finally {
     pending.value = false
   }

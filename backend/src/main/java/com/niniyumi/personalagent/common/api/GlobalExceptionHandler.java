@@ -8,6 +8,7 @@ import com.niniyumi.personalagent.auth.application.InvalidRefreshTokenException;
 import com.niniyumi.personalagent.auth.application.InvalidPasswordResetCodeException;
 import com.niniyumi.personalagent.auth.application.InvalidRegistrationVerificationCodeException;
 import com.niniyumi.personalagent.auth.application.UsernameAlreadyExistsException;
+import com.niniyumi.personalagent.auth.application.VerificationMailSendException;
 import com.niniyumi.personalagent.weeklyreport.application.InvalidWeekStartException;
 import com.niniyumi.personalagent.weeklyreport.application.InvalidDocxException;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAlreadyExistsException;
@@ -20,12 +21,15 @@ import com.niniyumi.personalagent.course.application.CourseNotFoundException;
 import com.niniyumi.personalagent.course.application.InvalidCoursePartsException;
 import com.niniyumi.personalagent.course.application.InvalidCourseStateException;
 import com.niniyumi.personalagent.course.application.InvalidCourseTitleException;
-import java.util.UUID;
+import com.niniyumi.personalagent.common.logging.RequestTraceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -74,6 +78,15 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, "INVALID_REGISTRATION_CODE", "Invalid or expired verification code");
     }
 
+    @ExceptionHandler(VerificationMailSendException.class)
+    public ResponseEntity<ApiErrorResponse> handleVerificationMailSendFailure(VerificationMailSendException exception) {
+        String traceId = RequestTraceContext.currentOrCreate();
+        log.error("Verification email could not be sent, traceId={}", traceId, exception);
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ApiErrorResponse("VERIFICATION_MAIL_SEND_FAILED",
+                        "Verification email could not be sent", traceId));
+    }
+
     @ExceptionHandler(WeeklyReportNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleWeeklyReportNotFound() {
         return error(HttpStatus.NOT_FOUND, "WEEKLY_REPORT_NOT_FOUND", "Weekly report not found");
@@ -110,8 +123,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(SummaryGenerationException.class)
-    public ResponseEntity<ApiErrorResponse> handleSummaryGenerationFailure() {
-        return error(HttpStatus.BAD_GATEWAY, "SUMMARY_GENERATION_FAILED", "Summary generation failed");
+    public ResponseEntity<ApiErrorResponse> handleSummaryGenerationFailure(SummaryGenerationException exception) {
+        String traceId = RequestTraceContext.currentOrCreate();
+        log.error("Work summary generation failed, traceId={}", traceId, exception);
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ApiErrorResponse("SUMMARY_GENERATION_FAILED", "Summary generation failed", traceId));
     }
 
     @ExceptionHandler(InvalidSummaryPeriodException.class)
@@ -121,6 +137,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationFailure() {
+        return error(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Validation failed");
+    }
+
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class})
+    public ResponseEntity<ApiErrorResponse> handleMalformedRequest() {
         return error(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Validation failed");
     }
 
@@ -141,13 +163,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpected(Exception exception) {
-        String traceId = UUID.randomUUID().toString();
+        String traceId = RequestTraceContext.currentOrCreate();
         log.error("Unhandled request exception, traceId={}", traceId, exception);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiErrorResponse("INTERNAL_ERROR", "Unexpected server error", traceId));
     }
 
     private ResponseEntity<ApiErrorResponse> error(HttpStatus status, String code, String message) {
-        return ResponseEntity.status(status).body(new ApiErrorResponse(code, message, UUID.randomUUID().toString()));
+        return ResponseEntity.status(status)
+                .body(new ApiErrorResponse(code, message, RequestTraceContext.currentOrCreate()));
     }
 }

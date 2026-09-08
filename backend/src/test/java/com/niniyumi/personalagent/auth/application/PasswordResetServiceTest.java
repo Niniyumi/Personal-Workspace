@@ -21,9 +21,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
 class PasswordResetServiceTest {
     @Mock UserRepository users;
     @Mock PasswordResetCodeRepository codes;
@@ -61,7 +63,7 @@ class PasswordResetServiceTest {
     }
 
     @Test
-    void unknownEmailReturnsNormallyWithoutSendingMail() {
+    void unknownEmailReturnsNormallyWithoutSendingMail(CapturedOutput output) {
         when(users.findByUsernameOrEmail("missing@example.com")).thenReturn(Optional.empty());
         PasswordResetService service = new PasswordResetService(
                 users, codes, refreshSessions, mailSender, codeGenerator, passwordEncoder, clock);
@@ -69,6 +71,10 @@ class PasswordResetServiceTest {
         service.request("missing@example.com");
 
         verifyNoInteractions(codes, mailSender, codeGenerator, passwordEncoder);
+        org.assertj.core.api.Assertions.assertThat(output)
+                .contains("Password reset email skipped")
+                .contains("mi***@example.com")
+                .doesNotContain("missing@example.com");
     }
 
     @Test

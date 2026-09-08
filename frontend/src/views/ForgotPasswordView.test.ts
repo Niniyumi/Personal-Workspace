@@ -42,4 +42,26 @@ describe('ForgotPasswordView', () => {
     })
     expect(push).toHaveBeenCalledWith({ name: 'login', query: { reset: '1' } })
   })
+
+  it('shows an actionable message when the reset email cannot be sent', async () => {
+    vi.mocked(authApi.requestPasswordReset).mockRejectedValue({
+      isAxiosError: true,
+      response: { data: { code: 'VERIFICATION_MAIL_SEND_FAILED' } },
+    })
+    const wrapper = mount(ForgotPasswordView, {
+      global: {
+        stubs: {
+          AuthShell: { template: '<main><slot /></main>' },
+          RouterLink: { template: '<a><slot /></a>' },
+        },
+      },
+    })
+
+    await wrapper.get('input[type="email"]').setValue('nini@example.com')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text())
+      .toBe('验证码发送失败，请稍后重试；仍失败请联系管理员')
+  })
 })

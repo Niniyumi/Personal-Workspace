@@ -72,6 +72,9 @@ describe('weeklyReportApi', () => {
       return [200, classification]
     })
 
-    await expect(api.importDocx('access-token', file)).resolves.toEqual(classification)
+    await expect(api.importDocx('access-token', file, { index: 2, total: 5 }))
+      .resolves.toEqual(classification)
+    expect(mock.history.post[0]?.headers?.['X-Batch-Index']).toBe('2')
+    expect(mock.history.post[0]?.headers?.['X-Batch-Total']).toBe('5')
   })
 })

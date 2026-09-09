@@ -52,7 +52,8 @@ server:
 
 logging:
   file:
-    name: ${LOG_FILE:./logs/personal-agent.log}
+    # IDEA 外置 Tomcat 使用 catalina.base；直接运行时仍落在当前目录的 logs。
+    name: ${LOG_FILE:${catalina.base:.}/logs/personal-agent.log}
   pattern:
     level: "%5p [traceId:%X{traceId:-}]"
   logback:

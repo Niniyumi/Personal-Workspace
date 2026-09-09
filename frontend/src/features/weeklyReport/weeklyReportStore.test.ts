@@ -62,7 +62,11 @@ describe('weeklyReportStore', () => {
 
     await store.importDocx(file)
 
-    expect(weeklyReportApi.importDocx).toHaveBeenCalledWith('access-token', file)
+    expect(weeklyReportApi.importDocx).toHaveBeenCalledWith(
+      'access-token',
+      file,
+      { index: 1, total: 1 },
+    )
     expect(store.imported).toEqual(imported)
   })
 

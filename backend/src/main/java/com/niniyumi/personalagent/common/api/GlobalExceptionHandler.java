@@ -170,6 +170,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiErrorResponse> error(HttpStatus status, String code, String message) {
+        log.warn("API request rejected, status={}, code={}, reason={}", status.value(), code, message);
         return ResponseEntity.status(status)
                 .body(new ApiErrorResponse(code, message, RequestTraceContext.currentOrCreate()));
     }

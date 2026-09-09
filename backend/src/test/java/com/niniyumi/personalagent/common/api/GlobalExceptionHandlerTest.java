@@ -3,6 +3,7 @@ package com.niniyumi.personalagent.common.api;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.niniyumi.personalagent.auth.application.VerificationMailSendException;
+import com.niniyumi.personalagent.weeklyreport.application.InvalidDocxException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,5 +46,20 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().code()).isEqualTo("INTERNAL_ERROR");
         assertThat(response.getBody().traceId()).isNotBlank();
+    }
+
+    @Test
+    void logsHandledBusinessFailureCodeAndReason(CapturedOutput output) {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        MDC.put("traceId", "trace-docx-test");
+
+        ResponseEntity<ApiErrorResponse> response = handler.handleInvalidDocx();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(output)
+                .contains("API request rejected")
+                .contains("code=INVALID_DOCX")
+                .contains("reason=Invalid DOCX file")
+                .doesNotContain(InvalidDocxException.class.getName());
     }
 }

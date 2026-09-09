@@ -1,5 +1,6 @@
 package com.niniyumi.personalagent.weeklyreport.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -31,9 +32,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -43,6 +47,7 @@ import org.springframework.mock.web.MockMultipartFile;
 @WebMvcTest(value = WeeklyReportController.class,
         properties = "app.security.jwt-secret=test-jwt-secret-for-webmvc-tests-01")
 @Import({SecurityConfig.class, ApiSecurityErrorHandler.class, GlobalExceptionHandler.class})
+@ExtendWith(OutputCaptureExtension.class)
 class WeeklyReportControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -125,7 +130,7 @@ class WeeklyReportControllerTest {
     }
 
     @Test
-    void importDocxClassifiesTextWithoutSavingAReport() throws Exception {
+    void importDocxClassifiesTextWithoutSavingAReport(CapturedOutput output) throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "week-34.docx", "application/octet-stream", "docx".getBytes());
         when(extractor.extract(any())).thenReturn("原始周报文字");
@@ -136,6 +141,8 @@ class WeeklyReportControllerTest {
 
         mockMvc.perform(multipart("/api/weekly-reports/import-docx")
                         .file(file)
+                        .header("X-Batch-Index", "2")
+                        .header("X-Batch-Total", "5")
                         .with(authentication(principalAuthentication())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.coreWork").value("完成登录"))
@@ -143,6 +150,9 @@ class WeeklyReportControllerTest {
                 .andExpect(jsonPath("$.nextWeekPlan").value("开发周报"))
                 .andExpect(jsonPath("$.weekStartDate").value("2026-08-24"))
                 .andExpect(jsonPath("$.sourceFileName").value("week-34.docx"));
+        assertThat(output)
+                .contains("Weekly report DOCX extracted, batch=2/5, fileBytes=4, textChars=6")
+                .contains("Weekly report DOCX classified, batch=2/5, weekStart=2026-08-24");
         verifyNoInteractions(service);
     }
 

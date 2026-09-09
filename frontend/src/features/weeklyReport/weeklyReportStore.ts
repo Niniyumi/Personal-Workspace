@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { logApiError } from '../../shared/logApiError'
 import { useAuthStore } from '../auth/authStore'
 import { weeklyReportApi } from './weeklyReportApi'
+import type { BatchProgress } from './weeklyReportApi'
 import type { DocxImportResult, WeeklyReport, WeeklyReportInput } from './types'
 
 export const useWeeklyReportStore = defineStore('weeklyReport', () => {
@@ -56,13 +57,13 @@ export const useWeeklyReportStore = defineStore('weeklyReport', () => {
   }
 
   async function importDocx(file: File): Promise<DocxImportResult | null> {
-    const result = await recognizeDocx(file)
+    const result = await recognizeDocx(file, { index: 1, total: 1 })
     if (result !== null) imported.value = result
     return result
   }
 
-  async function recognizeDocx(file: File): Promise<DocxImportResult | null> {
-    return request((token) => weeklyReportApi.importDocx(token, file))
+  async function recognizeDocx(file: File, progress: BatchProgress): Promise<DocxImportResult | null> {
+    return request((token) => weeklyReportApi.importDocx(token, file, progress))
   }
 
   return {

@@ -110,6 +110,8 @@ describe('WeeklyReportsView', () => {
     expect(batchItems).toHaveLength(1)
     expect((batchItems[0]!.findAll('textarea')[0]!.element as HTMLTextAreaElement).value)
       .toBe('完成登录\n完成看板')
+    expect(mocks.recognizeDocx).toHaveBeenNthCalledWith(1, files[0], { index: 1, total: 2 })
+    expect(mocks.recognizeDocx).toHaveBeenNthCalledWith(2, files[1], { index: 2, total: 2 })
     await wrapper.get('[data-test="save-batch-reports"]').trigger('click')
     await flushPromises()
 

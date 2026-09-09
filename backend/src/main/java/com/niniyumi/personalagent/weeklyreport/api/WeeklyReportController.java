@@ -10,6 +10,8 @@ import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportDateResol
 import com.niniyumi.personalagent.weeklyreport.infrastructure.document.DocxTextExtractor;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/weekly-reports")
 public class WeeklyReportController {
+    private static final Logger log = LoggerFactory.getLogger(WeeklyReportController.class);
     private final WeeklyReportService service;
     private final DocxTextExtractor extractor;
     private final WeeklyReportAiService aiService;
@@ -78,11 +82,19 @@ public class WeeklyReportController {
     }
 
     @PostMapping(value = "/import-docx", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public DocxImportResponse importDocx(@RequestPart("file") MultipartFile file) {
+    public DocxImportResponse importDocx(
+            @RequestPart("file") MultipartFile file,
+            @RequestHeader(value = "X-Batch-Index", defaultValue = "1") int batchIndex,
+            @RequestHeader(value = "X-Batch-Total", defaultValue = "1") int batchTotal) {
         String text = extractor.extract(file);
+        log.info("Weekly report DOCX extracted, batch={}/{}, fileBytes={}, textChars={}",
+                batchIndex, batchTotal, file.getSize(), text.length());
         String fileName = file.getOriginalFilename();
-        return DocxImportResponse.from(
+        DocxImportResponse response = DocxImportResponse.from(
                 aiService.classifyDocument(text), fileName,
                 dateResolver.resolveWeekStart(fileName, text).orElse(null));
+        log.info("Weekly report DOCX classified, batch={}/{}, weekStart={}",
+                batchIndex, batchTotal, response.weekStartDate());
+        return response;
     }
 }

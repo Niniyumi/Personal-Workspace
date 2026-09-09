@@ -75,9 +75,10 @@ async function importFiles(files: File[]) {
   batchPending.value = true
   const recognized: DocxImportResult[] = []
   const failedNames: string[] = []
-  for (const file of files) {
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index]!
     try {
-      const result = await store.recognizeDocx(file)
+      const result = await store.recognizeDocx(file, { index: index + 1, total: files.length })
       if (result) recognized.push(result)
     } catch {
       failedNames.push(file.name)

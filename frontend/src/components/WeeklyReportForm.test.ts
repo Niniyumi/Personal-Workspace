@@ -21,6 +21,7 @@ describe('WeeklyReportForm', () => {
     await wrapper.get('[data-test="core-work"]').setValue('已经输入的内容')
     await wrapper.setProps({
       imported: {
+        weekStartDate: '2026-08-24',
         coreWork: '文档中的核心工作',
         problems: '文档中的问题',
         nextWeekPlan: '文档中的计划',
@@ -34,6 +35,8 @@ describe('WeeklyReportForm', () => {
       .toBe('文档中的问题')
     expect((wrapper.get('[data-test="next-week-plan"]').element as HTMLTextAreaElement).value)
       .toBe('文档中的计划')
+    expect((wrapper.get('input[type="date"]').element as HTMLInputElement).value)
+      .toBe('2026-08-24')
   })
 
   it('emits the three fields when saving', async () => {
@@ -49,5 +52,19 @@ describe('WeeklyReportForm', () => {
       problems: '接口联调耗时',
       nextWeekPlan: '开发周报',
     })
+  })
+
+  it('emits every selected docx for batch recognition', async () => {
+    const wrapper = mount(WeeklyReportForm)
+    const input = wrapper.get('[data-test="weekly-docx-input"]')
+    const files = [
+      new File(['a'], '2026-09-03.docx'),
+      new File(['b'], '2026-09-10.docx'),
+    ]
+    Object.defineProperty(input.element, 'files', { value: files })
+
+    await input.trigger('change')
+
+    expect(wrapper.emitted('import')?.[0]?.[0]).toEqual(files)
   })
 })

@@ -1,16 +1,26 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { ArrowLeft, Document } from '@element-plus/icons-vue'
-import { ElIcon } from 'element-plus'
+import { ElButton, ElIcon } from 'element-plus'
 import WeeklyReportForm from '../components/WeeklyReportForm.vue'
 import { useWeeklyReportStore } from '../features/weeklyReport/weeklyReportStore'
 import type { WeeklyReportInput } from '../features/weeklyReport/types'
+import type { DocxImportResult } from '../features/weeklyReport/types'
 
 const store = useWeeklyReportStore()
 const now = new Date()
 const year = ref(now.getFullYear())
 const month = ref(now.getMonth() + 1)
 const notice = ref('')
+const batchDrafts = ref<BatchDraft[]>([])
+const batchPending = ref(false)
+const batchSaving = ref(false)
+const batchNotice = ref('')
+
+interface BatchDraft extends WeeklyReportInput {
+  status: 'pending' | 'saved' | 'failed'
+  message: string
+}
 
 onMounted(() => {
   store.imported = null
@@ -49,12 +59,101 @@ async function save(input: WeeklyReportInput) {
   }
 }
 
-async function importFile(file: File) {
+async function importFiles(files: File[]) {
   notice.value = ''
+  batchNotice.value = ''
+  batchDrafts.value = []
+  if (files.length === 1 && files[0]) {
+    try {
+      await store.importDocx(files[0])
+    } catch {
+      // Store 已提供错误提示。
+    }
+    return
+  }
+
+  batchPending.value = true
+  const recognized: DocxImportResult[] = []
+  const failedNames: string[] = []
+  for (const file of files) {
+    try {
+      const result = await store.recognizeDocx(file)
+      if (result) recognized.push(result)
+    } catch {
+      failedNames.push(file.name)
+    }
+  }
+  batchDrafts.value = mergeByWeek(recognized)
+  batchPending.value = false
+  if (failedNames.length) batchNotice.value = `${failedNames.length} 个文件识别失败，可以重新选择上传。`
+}
+
+function mergeText(first: string, second: string | null) {
+  if (!second?.trim()) return first
+  return first.trim() ? `${first.trimEnd()}\n${second.trim()}` : second.trim()
+}
+
+function mergeByWeek(results: DocxImportResult[]): BatchDraft[] {
+  const grouped = new Map<string, BatchDraft>()
+  results.forEach((result, index) => {
+    const key = result.weekStartDate ?? `missing-${index}`
+    const current = grouped.get(key)
+    if (current) {
+      current.coreWork = mergeText(current.coreWork, result.coreWork)
+      current.problems = mergeText(current.problems, result.problems)
+      current.nextWeekPlan = mergeText(current.nextWeekPlan, result.nextWeekPlan)
+      current.sourceFileName = `${current.sourceFileName}、${result.sourceFileName}`.slice(0, 255)
+      return
+    }
+    grouped.set(key, {
+      weekStartDate: result.weekStartDate ?? '',
+      coreWork: result.coreWork,
+      problems: result.problems ?? '',
+      nextWeekPlan: result.nextWeekPlan ?? '',
+      sourceFileName: result.sourceFileName,
+      status: 'pending',
+      message: result.weekStartDate ? '' : '未识别到日期，请选择所属周',
+    })
+  })
+  return [...grouped.values()]
+}
+
+function normalizeToMonday(value: string) {
+  if (!value) return ''
+  const date = new Date(`${value}T00:00:00`)
+  const day = date.getDay() || 7
+  date.setDate(date.getDate() - day + 1)
+  return date.toLocaleDateString('en-CA')
+}
+
+async function saveBatch() {
+  if (batchSaving.value) return
+  if (batchDrafts.value.some((draft) => !draft.weekStartDate)) {
+    batchNotice.value = '请先为未识别日期的文件选择所属周。'
+    return
+  }
+  batchSaving.value = true
+  let saved = 0
+  for (const draft of batchDrafts.value.filter((item) => item.status !== 'saved')) {
+    draft.weekStartDate = normalizeToMonday(draft.weekStartDate)
+    try {
+      const result = await store.create(draft)
+      if (result) {
+        draft.status = 'saved'
+        draft.message = '已保存'
+        saved += 1
+      }
+    } catch {
+      draft.status = 'failed'
+      draft.message = '该周可能已有周报，请检查后重试'
+    }
+  }
+  batchSaving.value = false
+  batchNotice.value = saved ? `成功导入 ${saved} 份周报。` : '没有新的周报被保存。'
   try {
-    await store.importDocx(file)
+    await loadHistory()
   } catch {
-    // 错误信息由 Store 展示在表单上方。
+    // 保存结果已经显示，历史列表加载错误使用 Store 提示。
   }
 }
 </script>
@@ -65,34 +164,46 @@ async function importFile(file: File) {
       <header class="report-header">
         <div>
           <RouterLink class="back-link" :to="{ name: 'home' }"><ElIcon><ArrowLeft /></ElIcon> 返回工作台</RouterLink>
-          <p>WEEKLY REPORT AGENT</p>
-          <h1>把这一周，整理成清晰的记录。</h1>
-          <span>在线补充文字，或导入 DOCX 让 Agent 帮你归类。</span>
+          <p>周报</p>
+          <h1>记录本周工作</h1>
+          <span>在线填写，也可以导入 DOCX。</span>
         </div>
         <div class="header-mark">W / 01</div>
       </header>
 
       <main class="report-layout">
         <section class="composer-section">
-          <div class="section-title"><span>NEW REPORT</span><h2>新建周报</h2></div>
+          <div class="section-title"><span>填写内容</span><h2>新建周报</h2></div>
           <p v-if="notice" class="success-notice" role="status">{{ notice }}</p>
           <p v-if="store.error" class="error-notice" role="alert">{{ store.error }}</p>
           <WeeklyReportForm
+            allow-multiple
             :imported="store.imported"
             :loading="store.loading"
             @save="save"
-            @import="importFile"
+            @import="importFiles"
           />
+          <section v-if="batchPending || batchDrafts.length" class="batch-panel">
+            <div class="batch-heading"><div><span>批量预览</span><h2>{{ batchPending ? '正在识别文件' : `${batchDrafts.length} 份待确认周报` }}</h2></div></div>
+            <p v-if="batchNotice" class="batch-notice" role="status">{{ batchNotice }}</p>
+            <article v-for="draft in batchDrafts" :key="draft.sourceFileName ?? draft.weekStartDate" data-test="batch-report-item" class="batch-item">
+              <div class="batch-row"><strong>{{ draft.sourceFileName }}</strong><span :class="draft.status">{{ draft.message || '待保存' }}</span></div>
+              <label>所属周<input v-model="draft.weekStartDate" class="period-control" type="date" @change="draft.weekStartDate = normalizeToMonday(draft.weekStartDate)" /></label>
+              <label>核心工作<textarea v-model="draft.coreWork" rows="4"></textarea></label>
+              <div class="batch-fields"><label>遇到的问题<textarea v-model="draft.problems" rows="3"></textarea></label><label>下周计划<textarea v-model="draft.nextWeekPlan" rows="3"></textarea></label></div>
+            </article>
+            <ElButton data-test="save-batch-reports" type="primary" round :loading="batchSaving" :disabled="batchPending" @click="saveBatch">确认导入</ElButton>
+          </section>
         </section>
 
         <aside class="history-section">
           <div class="history-heading">
-            <div><span>ARCHIVE</span><h2>历史周报</h2></div>
+            <div><span>已保存</span><h2>历史周报</h2></div>
             <ElIcon><Document /></ElIcon>
           </div>
           <div class="history-filter">
-            <label>年份<input v-model.number="year" data-test="history-year" type="number" min="2000" max="2100" /></label>
-            <label>月份<input v-model.number="month" data-test="history-month" type="number" min="1" max="12" /></label>
+            <label>年份<input v-model.number="year" class="period-control" data-test="history-year" type="number" min="2000" max="2100" /></label>
+            <label>月份<input v-model.number="month" class="period-control" data-test="history-month" type="number" min="1" max="12" /></label>
           </div>
           <div v-if="store.reports.length" class="report-list">
             <article v-for="report in store.reports" :key="report.id">
@@ -130,14 +241,22 @@ async function importFile(file: File) {
 .history-heading { display: flex; align-items: flex-start; justify-content: space-between; }
 .history-heading :deep(.el-icon) { display: grid; width: 44px; height: 44px; place-items: center; border-radius: 16px; color: #17181c; background: #ffd84d; font-size: 20px; }
 .history-filter { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.history-filter label { display: grid; gap: 7px; color: #aaaab0; font-size: 11px; }
-.history-filter input { min-width: 0; min-height: 42px; padding: 0 12px; border: 1px solid #44464f; border-radius: 16px; color: #fff; background: #30323a; }
+.history-filter label { display: grid; gap: 7px; color: #c5c5ca; font-size: 12px; font-weight: 700; }
+.history-filter input { min-width: 0; min-height: 48px; padding: 0 14px; border: 1px solid #555761; border-radius: 16px; color: #fff; background: #30323a; font: inherit; font-size: 14px; }
+.period-control:focus-visible { outline: 3px solid rgb(255 216 77 / 28%); outline-offset: 2px; border-color: #ffd84d; }
 .report-list { display: grid; gap: 12px; margin-top: 24px; }
 .report-list article { display: grid; gap: 9px; padding: 18px; border-radius: 20px; background: #30323a; }
 .report-list time { color: #ffd84d; font-size: 11px; font-weight: 800; }
 .report-list strong { display: -webkit-box; overflow: hidden; color: #f7f7f5; font-size: 14px; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .report-list a { color: #f89a6f; font-size: 12px; font-weight: 750; text-decoration: none; }
 .empty-history { margin-top: 24px; padding: 28px 16px; border: 1px dashed #4b4d55; border-radius: 20px; color: #aaaab0; font-size: 13px; text-align: center; }
+.batch-panel { display: grid; gap: 14px; margin-top: 22px; padding-top: 22px; border-top: 1px solid #e1ddd5; }
+.batch-heading h2 { margin: 5px 0 0; font-size: 22px; }.batch-heading span { color: #f05a18; font-size: 11px; font-weight: 800; }
+.batch-notice { margin: 0; padding: 11px 14px; border-radius: 13px; color: #604900; background: #fff1a8; font-size: 12px; }
+.batch-item { display: grid; gap: 12px; padding: 18px; border: 1px solid #e4dfd7; border-radius: 20px; background: #fff; }
+.batch-row { display: flex; justify-content: space-between; gap: 14px; }.batch-row span { color: #8a867e; font-size: 12px; }.batch-row .saved { color: #347454; }.batch-row .failed { color: #b42318; }
+.batch-item label { display: grid; gap: 6px; color: #6e6962; font-size: 12px; }.batch-item input,.batch-item textarea { padding: 10px 12px; border: 1px solid #ded9d0; border-radius: 12px; font: inherit; }.batch-item input.period-control { min-height: 48px; font-size: 14px; }.batch-item textarea { resize: vertical; }
+.batch-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 940px) { .report-layout { grid-template-columns: 1fr; } }
-@media (max-width: 620px) { .report-page { padding: 0; } .report-shell { min-height: 100vh; border-radius: 0; } .header-mark { display: none; } }
+@media (max-width: 620px) { .report-page { padding: 0; } .report-shell { min-height: 100vh; border-radius: 0; } .header-mark { display: none; } .history-filter { grid-template-columns: 1fr; } .batch-fields { grid-template-columns: 1fr; } }
 </style>

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   loadMonth: vi.fn(),
   create: vi.fn(),
   importDocx: vi.fn(),
+  recognizeDocx: vi.fn(),
   store: {
     reports: [] as Array<Record<string, unknown>>,
     imported: null,
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
     loadMonth: vi.fn(),
     create: vi.fn(),
     importDocx: vi.fn(),
+    recognizeDocx: vi.fn(),
   },
 }))
 
@@ -30,10 +32,20 @@ beforeEach(() => {
   mocks.store.loadMonth = mocks.loadMonth
   mocks.store.create = mocks.create
   mocks.store.importDocx = mocks.importDocx
+  mocks.store.recognizeDocx = mocks.recognizeDocx
   mocks.loadMonth.mockResolvedValue(undefined)
 })
 
 describe('WeeklyReportsView', () => {
+  it('uses large controls for filtering report history', () => {
+    const wrapper = mount(WeeklyReportsView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    })
+
+    expect(wrapper.get('[data-test="history-year"]').classes()).toContain('period-control')
+    expect(wrapper.get('[data-test="history-month"]').classes()).toContain('period-control')
+  })
+
   it('loads reports again after changing the year and month', async () => {
     const wrapper = mount(WeeklyReportsView, {
       global: { stubs: { RouterLink: RouterLinkStub } },
@@ -71,5 +83,41 @@ describe('WeeklyReportsView', () => {
       name: 'weekly-report-detail',
       params: { id: 7 },
     })
+  })
+
+  it('recognizes multiple files and merges files assigned to the same week', async () => {
+    mocks.recognizeDocx
+      .mockResolvedValueOnce({
+        weekStartDate: '2026-09-07', coreWork: '完成登录', problems: null,
+        nextWeekPlan: '准备联调', sourceFileName: '周报一.docx',
+      })
+      .mockResolvedValueOnce({
+        weekStartDate: '2026-09-07', coreWork: '完成看板', problems: '接口较慢',
+        nextWeekPlan: null, sourceFileName: '周报二.docx',
+      })
+    mocks.create.mockResolvedValue({ id: 8, weekStartDate: '2026-09-07' })
+    const wrapper = mount(WeeklyReportsView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    })
+    const input = wrapper.get('[data-test="weekly-docx-input"]')
+    const files = [new File(['a'], '周报一.docx'), new File(['b'], '周报二.docx')]
+    Object.defineProperty(input.element, 'files', { value: files })
+
+    await input.trigger('change')
+    await flushPromises()
+
+    const batchItems = wrapper.findAll('[data-test="batch-report-item"]')
+    expect(batchItems).toHaveLength(1)
+    expect((batchItems[0]!.findAll('textarea')[0]!.element as HTMLTextAreaElement).value)
+      .toBe('完成登录\n完成看板')
+    await wrapper.get('[data-test="save-batch-reports"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.create).toHaveBeenCalledOnce()
+    expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({
+      weekStartDate: '2026-09-07',
+      coreWork: '完成登录\n完成看板',
+      sourceFileName: '周报一.docx、周报二.docx',
+    }))
   })
 })

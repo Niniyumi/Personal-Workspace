@@ -7,6 +7,7 @@ import com.niniyumi.personalagent.course.api.dto.CourseSummaryResponse;
 import com.niniyumi.personalagent.course.api.dto.CreateCourseRequest;
 import com.niniyumi.personalagent.course.api.dto.UpdateCourseNoteRequest;
 import com.niniyumi.personalagent.course.application.CourseProcessingService;
+import com.niniyumi.personalagent.course.application.CourseAudioService;
 import com.niniyumi.personalagent.course.application.CourseRecordingService;
 import com.niniyumi.personalagent.course.application.CourseService;
 import com.niniyumi.personalagent.course.domain.Course;
@@ -40,16 +41,19 @@ public class CourseController {
     private final CourseRecordingService recordingService;
     private final CourseProcessingService processingService;
     private final CourseDocxExporter docxExporter;
+    private final CourseAudioService courseAudioService;
 
     public CourseController(
             CourseService courseService,
             CourseRecordingService recordingService,
             CourseProcessingService processingService,
-            CourseDocxExporter docxExporter) {
+            CourseDocxExporter docxExporter,
+            CourseAudioService courseAudioService) {
         this.courseService = courseService;
         this.recordingService = recordingService;
         this.processingService = processingService;
         this.docxExporter = docxExporter;
+        this.courseAudioService = courseAudioService;
     }
 
     @PostMapping
@@ -83,6 +87,25 @@ public class CourseController {
                 user.userId(), courseId, partNumber, durationSeconds, file));
     }
 
+    @GetMapping("/{courseId}/parts")
+    public List<CourseAudioPartResponse> listParts(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable long courseId) {
+        return courseAudioService.list(user.userId(), courseId).stream()
+                .map(CourseAudioPartResponse::from)
+                .toList();
+    }
+
+    @GetMapping(value = "/{courseId}/parts/{partNumber}/audio", produces = "audio/webm")
+    public ResponseEntity<byte[]> readAudioPart(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable long courseId,
+            @PathVariable int partNumber) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("audio/webm"))
+                .body(courseAudioService.read(user.userId(), courseId, partNumber));
+    }
+
     @PostMapping("/{courseId}/complete")
     public ResponseEntity<CourseResponse> complete(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -99,6 +122,15 @@ public class CourseController {
             @PathVariable long courseId) {
         Course course = recordingService.retry(user.userId(), courseId);
         processingService.processAsync(user.userId(), courseId);
+        return ResponseEntity.accepted().body(CourseResponse.from(course));
+    }
+
+    @PostMapping("/{courseId}/note/generate")
+    public ResponseEntity<CourseResponse> generateNote(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable long courseId) {
+        Course course = courseService.beginNoteGeneration(user.userId(), courseId);
+        processingService.generateNoteAsync(user.userId(), courseId);
         return ResponseEntity.accepted().body(CourseResponse.from(course));
     }
 

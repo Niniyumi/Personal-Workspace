@@ -72,6 +72,28 @@ class CourseServiceTest {
                 .isInstanceOf(InvalidCourseStateException.class);
     }
 
+    @Test
+    void beginsNoteGenerationOnlyAfterTranscription() {
+        Course created = service.create(42L, "Spring Boot");
+        repository.update(new Course(
+                created.id(), created.userId(), created.title(), CourseStatus.TRANSCRIBED, 80,
+                100, "完整转写", null, null, created.createdAt(), created.updatedAt()));
+
+        Course processing = service.beginNoteGeneration(42L, created.id());
+
+        assertThat(processing.status()).isEqualTo(CourseStatus.PROCESSING);
+        assertThat(processing.processingProgress()).isEqualTo(85);
+        assertThat(processing.transcript()).isEqualTo("完整转写");
+    }
+
+    @Test
+    void rejectsNoteGenerationBeforeTranscription() {
+        Course created = service.create(42L, "Spring Boot");
+
+        assertThatThrownBy(() -> service.beginNoteGeneration(42L, created.id()))
+                .isInstanceOf(InvalidCourseStateException.class);
+    }
+
     private static final class InMemoryCourseRepository implements CourseRepository {
         private final List<Course> courses = new ArrayList<>();
 

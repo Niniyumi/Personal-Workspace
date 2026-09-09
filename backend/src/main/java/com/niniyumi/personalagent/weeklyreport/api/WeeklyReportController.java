@@ -6,6 +6,7 @@ import com.niniyumi.personalagent.weeklyreport.api.dto.WeeklyReportResponse;
 import com.niniyumi.personalagent.weeklyreport.api.dto.DocxImportResponse;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAiService;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportService;
+import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportDateResolver;
 import com.niniyumi.personalagent.weeklyreport.infrastructure.document.DocxTextExtractor;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -30,14 +31,17 @@ public class WeeklyReportController {
     private final WeeklyReportService service;
     private final DocxTextExtractor extractor;
     private final WeeklyReportAiService aiService;
+    private final WeeklyReportDateResolver dateResolver;
 
     public WeeklyReportController(
             WeeklyReportService service,
             DocxTextExtractor extractor,
-            WeeklyReportAiService aiService) {
+            WeeklyReportAiService aiService,
+            WeeklyReportDateResolver dateResolver) {
         this.service = service;
         this.extractor = extractor;
         this.aiService = aiService;
+        this.dateResolver = dateResolver;
     }
 
     @PostMapping
@@ -76,6 +80,9 @@ public class WeeklyReportController {
     @PostMapping(value = "/import-docx", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public DocxImportResponse importDocx(@RequestPart("file") MultipartFile file) {
         String text = extractor.extract(file);
-        return DocxImportResponse.from(aiService.classifyDocument(text), file.getOriginalFilename());
+        String fileName = file.getOriginalFilename();
+        return DocxImportResponse.from(
+                aiService.classifyDocument(text), fileName,
+                dateResolver.resolveWeekStart(fileName, text).orElse(null));
     }
 }

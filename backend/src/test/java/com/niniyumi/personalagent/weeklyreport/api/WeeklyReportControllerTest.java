@@ -23,6 +23,7 @@ import com.niniyumi.personalagent.weeklyreport.application.SaveWeeklyReportComma
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAlreadyExistsException;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportNotFoundException;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportService;
+import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportDateResolver;
 import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReport;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAiService;
 import com.niniyumi.personalagent.weeklyreport.infrastructure.document.DocxTextExtractor;
@@ -54,6 +55,9 @@ class WeeklyReportControllerTest {
 
     @MockBean
     private WeeklyReportAiService aiService;
+
+    @MockBean
+    private WeeklyReportDateResolver dateResolver;
 
     @Test
     void createReturnsTheOwnedReport() throws Exception {
@@ -127,6 +131,8 @@ class WeeklyReportControllerTest {
         when(extractor.extract(any())).thenReturn("原始周报文字");
         when(aiService.classifyDocument("原始周报文字"))
                 .thenReturn(new DocumentClassification("完成登录", "接口超时", "开发周报"));
+        when(dateResolver.resolveWeekStart("week-34.docx", "原始周报文字"))
+                .thenReturn(java.util.Optional.of(LocalDate.of(2026, 8, 24)));
 
         mockMvc.perform(multipart("/api/weekly-reports/import-docx")
                         .file(file)
@@ -135,6 +141,7 @@ class WeeklyReportControllerTest {
                 .andExpect(jsonPath("$.coreWork").value("完成登录"))
                 .andExpect(jsonPath("$.problems").value("接口超时"))
                 .andExpect(jsonPath("$.nextWeekPlan").value("开发周报"))
+                .andExpect(jsonPath("$.weekStartDate").value("2026-08-24"))
                 .andExpect(jsonPath("$.sourceFileName").value("week-34.docx"));
         verifyNoInteractions(service);
     }

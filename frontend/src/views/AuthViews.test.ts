@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   register: vi.fn(),
   requestRegistrationCode: vi.fn(),
   logout: vi.fn(),
+  loadDashboard: vi.fn(),
   store: {
     status: 'anonymous',
     error: null as string | null,
@@ -19,10 +20,20 @@ const mocks = vi.hoisted(() => ({
     requestRegistrationCode: vi.fn(),
     logout: vi.fn(),
   },
+  dashboard: {
+    data: null,
+    loading: false,
+    error: null,
+    load: vi.fn(),
+  },
 }))
 
 vi.mock('../features/auth/authStore', () => ({
   useAuthStore: () => mocks.store,
+}))
+
+vi.mock('../features/dashboard/dashboardStore', () => ({
+  useDashboardStore: () => mocks.dashboard,
 }))
 
 vi.mock('vue-router', async (importOriginal) => {
@@ -45,6 +56,7 @@ beforeEach(() => {
   mocks.store.register = mocks.register
   mocks.store.requestRegistrationCode = mocks.requestRegistrationCode
   mocks.store.logout = mocks.logout
+  mocks.dashboard.load = mocks.loadDashboard
 })
 
 describe('LoginView', () => {

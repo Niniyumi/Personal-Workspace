@@ -39,10 +39,10 @@ async function save(input: WeeklyReportInput) {
   }
 }
 
-async function importFile(file: File) {
+async function importFile(files: File[]) {
   notice.value = ''
   try {
-    await store.importDocx(file)
+    if (files[0]) await store.importDocx(files[0])
   } catch {
     // 错误信息由 Store 展示在表单上方。
   }
@@ -54,8 +54,8 @@ async function importFile(file: File) {
     <main class="detail-shell">
       <RouterLink class="back-link" :to="{ name: 'weekly-reports' }"><ElIcon><ArrowLeft /></ElIcon> 返回周报列表</RouterLink>
       <header>
-        <p>REPORT DETAIL / {{ reportId }}</p>
-        <h1>查看并继续完善这份周报。</h1>
+        <p>周报 #{{ reportId }}</p>
+        <h1>编辑周报</h1>
       </header>
       <p v-if="notice" class="success-notice" role="status">{{ notice }}</p>
       <p v-if="store.error" class="error-notice" role="alert">{{ store.error }}</p>

@@ -47,6 +47,28 @@ export function createCourseApi(client: AxiosInstance) {
       return response.data
     },
 
+    async generateNote(accessToken: string, courseId: number): Promise<Course> {
+      const response = await client.post<Course>(`/courses/${courseId}/note/generate`, undefined, {
+        headers: bearer(accessToken),
+      })
+      return response.data
+    },
+
+    async listParts(accessToken: string, courseId: number): Promise<CourseAudioPart[]> {
+      const response = await client.get<CourseAudioPart[]>(`/courses/${courseId}/parts`, {
+        headers: bearer(accessToken),
+      })
+      return response.data
+    },
+
+    async readAudioPart(accessToken: string, courseId: number, partNumber: number): Promise<Blob> {
+      const response = await client.get<Blob>(`/courses/${courseId}/parts/${partNumber}/audio`, {
+        headers: bearer(accessToken),
+        responseType: 'blob',
+      })
+      return response.data
+    },
+
     async retry(accessToken: string, courseId: number): Promise<Course> {
       const response = await client.post<Course>(`/courses/${courseId}/retry`, undefined, {
         headers: bearer(accessToken),

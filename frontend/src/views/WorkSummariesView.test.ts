@@ -31,6 +31,17 @@ beforeEach(() => {
 })
 
 describe('WorkSummariesView', () => {
+  it('uses large controls for selecting the summary period', () => {
+    const wrapper = mount(WorkSummariesView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    })
+
+    expect(wrapper.get('[data-test="summary-type-quarter"]').classes()).toContain('period-control')
+    expect(wrapper.get('[data-test="summary-type-year"]').classes()).toContain('period-control')
+    expect(wrapper.get('[data-test="summary-year"]').classes()).toContain('period-control')
+    expect(wrapper.get('[data-test="summary-quarter"]').classes()).toContain('period-control')
+  })
+
   it('switches modes and requires a quarter in quarter mode', async () => {
     const wrapper = mount(WorkSummariesView, {
       global: { stubs: { RouterLink: RouterLinkStub } },

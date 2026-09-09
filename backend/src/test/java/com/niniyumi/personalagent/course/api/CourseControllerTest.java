@@ -18,6 +18,7 @@ import com.niniyumi.personalagent.auth.infrastructure.security.AuthenticatedUser
 import com.niniyumi.personalagent.auth.infrastructure.security.SecurityConfig;
 import com.niniyumi.personalagent.common.api.GlobalExceptionHandler;
 import com.niniyumi.personalagent.course.application.CourseProcessingService;
+import com.niniyumi.personalagent.course.application.CourseAudioService;
 import com.niniyumi.personalagent.course.application.CourseRecordingService;
 import com.niniyumi.personalagent.course.application.CourseService;
 import com.niniyumi.personalagent.course.domain.Course;
@@ -54,6 +55,9 @@ class CourseControllerTest {
 
     @MockBean
     private CourseDocxExporter docxExporter;
+
+    @MockBean
+    private CourseAudioService courseAudioService;
 
     @Test
     void requiresAuthenticationForCourseApis() throws Exception {
@@ -128,6 +132,42 @@ class CourseControllerTest {
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("PROCESSING"));
         verify(processingService).processAsync(42L, 9L);
+    }
+
+    @Test
+    void startsNoteGenerationOnlyAfterTheTranscriptIsSaved() throws Exception {
+        Course transcribed = course(CourseStatus.TRANSCRIBED);
+        Course processing = new Course(
+                transcribed.id(), transcribed.userId(), transcribed.title(), CourseStatus.PROCESSING,
+                transcribed.durationSeconds(), 85, transcribed.transcript(), null, null,
+                transcribed.createdAt(), transcribed.updatedAt());
+        when(courseService.beginNoteGeneration(42L, 9L)).thenReturn(processing);
+
+        mockMvc.perform(post("/api/courses/9/note/generate")
+                        .with(authentication(principalAuthentication())))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("PROCESSING"))
+                .andExpect(jsonPath("$.transcript").value("完整转写"));
+
+        verify(processingService).generateNoteAsync(42L, 9L);
+    }
+
+    @Test
+    void listsAndStreamsOwnedAudioParts() throws Exception {
+        CourseAudioPart part = new CourseAudioPart(3L, 9L, 1, 20, "audio/9/1.webm", 5,
+                Instant.parse("2026-08-24T12:00:00Z"));
+        when(courseAudioService.list(42L, 9L)).thenReturn(List.of(part));
+        when(courseAudioService.read(42L, 9L, 1)).thenReturn("audio".getBytes());
+
+        mockMvc.perform(get("/api/courses/9/parts").with(authentication(principalAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].partNumber").value(1));
+
+        mockMvc.perform(get("/api/courses/9/parts/1/audio")
+                        .with(authentication(principalAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("audio/webm"))
+                .andExpect(content().bytes("audio".getBytes()));
     }
 
     @Test

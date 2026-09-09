@@ -13,6 +13,8 @@ const course = computed(() => store.current?.id === courseId ? store.current : n
 const note = ref('')
 const notice = ref('')
 const downloadPending = ref(false)
+const notePending = ref(false)
+const audioSources = ref<Record<number, string>>({})
 let pollTimer: number | null = null
 
 watch(() => course.value?.noteContent, (content) => {
@@ -20,7 +22,7 @@ watch(() => course.value?.noteContent, (content) => {
 }, { immediate: true })
 
 onMounted(async () => {
-  await refresh()
+  await Promise.all([refresh(), store.loadParts(courseId).catch(() => [])])
   if (course.value?.status === 'PROCESSING') startPolling()
 })
 
@@ -60,6 +62,20 @@ async function retry() {
   }).catch(() => undefined)
 }
 
+async function generateNote() {
+  if (notePending.value) return
+  notePending.value = true
+  await store.generateNote(courseId).then(() => {
+    notice.value = '正在生成笔记，可以稍后回来查看'
+    startPolling()
+  }).catch(() => undefined).finally(() => { notePending.value = false })
+}
+
+async function loadAudio(partNumber: number) {
+  const source = await store.loadAudioPart(courseId, partNumber).catch(() => null)
+  if (source) audioSources.value = { ...audioSources.value, [partNumber]: source }
+}
+
 async function downloadNote() {
   if (!course.value || downloadPending.value) return
   downloadPending.value = true
@@ -73,11 +89,11 @@ async function downloadNote() {
   <div class="detail-page">
     <main class="detail-shell">
       <RouterLink class="back-link" :to="{ name: 'courses' }"><ElIcon><ArrowLeft /></ElIcon> 返回课程记录</RouterLink>
-      <p class="eyebrow">COURSE DETAIL</p>
+      <p class="eyebrow">课程记录</p>
       <div v-if="course" class="detail-heading">
         <div><h1>{{ course.title }}</h1><span>{{ Math.ceil(course.durationSeconds / 60) }} 分钟</span></div>
         <ElTag round :type="course.status === 'FAILED' ? 'danger' : course.status === 'READY' ? 'success' : 'warning'">
-          {{ course.status === 'READY' ? '已完成' : course.status === 'FAILED' ? '处理失败' : '整理中' }}
+          {{ course.status === 'READY' ? '已完成' : course.status === 'TRANSCRIBED' ? '文字已提取' : course.status === 'FAILED' ? '转写失败' : '处理中' }}
         </ElTag>
       </div>
 
@@ -85,7 +101,7 @@ async function downloadNote() {
       <p v-if="notice" class="success-notice" role="status">{{ notice }}</p>
 
       <section v-if="course?.status === 'PROCESSING'" class="processing-card" aria-busy="true">
-        <span class="spinner"></span><h2>正在转写并生成笔记</h2>
+        <span class="spinner"></span><h2>{{ course.transcript ? '正在生成笔记' : '正在提取录音文字' }}</h2>
         <ElProgress
           data-test="course-progress"
           :percentage="course.processingProgress"
@@ -97,19 +113,33 @@ async function downloadNote() {
       </section>
 
       <section v-else-if="course?.status === 'FAILED'" class="failed-card">
-        <h2>这次整理没有完成</h2>
+        <h2>录音文字提取失败</h2>
         <p>{{ course.errorMessage }}</p>
         <ElButton data-test="retry-course" round type="primary" @click="retry"><ElIcon><Refresh /></ElIcon>重新处理</ElButton>
       </section>
 
       <div v-else-if="course" class="content-grid">
-        <section class="content-card">
-          <span>TRANSCRIPT</span><h2>完整转写</h2>
+        <section class="content-card transcript-card">
+          <span>原始内容</span><h2>完整转写</h2>
           <pre>{{ course.transcript || '暂无转写内容' }}</pre>
+          <div class="audio-list">
+            <h3>原始录音</h3>
+            <div v-for="part in store.parts" :key="part.id" class="audio-part">
+              <span>第 {{ part.partNumber }} 段 · {{ Math.ceil(part.durationSeconds / 60) }} 分钟</span>
+              <audio v-if="audioSources[part.partNumber]" controls :src="audioSources[part.partNumber]"></audio>
+              <ElButton v-else :data-test="`load-course-audio-${part.partNumber}`" text @click="loadAudio(part.partNumber)">加载录音</ElButton>
+            </div>
+          </div>
         </section>
         <section class="content-card note-card">
-          <span>MY NOTES</span><h2>课程笔记</h2>
-          <ElInput v-model="note" data-test="course-note" type="textarea" :rows="18" />
+          <span>整理结果</span><h2>课程笔记</h2>
+          <div v-if="course.status === 'TRANSCRIBED'" class="generate-box">
+            <p v-if="course.errorMessage" data-test="note-generation-error" class="note-error" role="alert">{{ course.errorMessage }}</p>
+            <p>文字已经保存。需要时再调用大模型整理成笔记。</p>
+            <ElButton data-test="generate-course-note" round type="primary" :loading="notePending" @click="generateNote">生成笔记</ElButton>
+          </div>
+          <template v-else>
+            <ElInput v-model="note" data-test="course-note" type="textarea" :rows="18" />
           <div class="note-actions">
             <ElButton data-test="save-course-note" round type="primary" @click="saveNote">保存笔记</ElButton>
             <ElButton
@@ -119,6 +149,7 @@ async function downloadNote() {
               @click="downloadNote"
             ><ElIcon><Download /></ElIcon>下载 DOCX</ElButton>
           </div>
+          </template>
         </section>
       </div>
     </main>
@@ -137,7 +168,13 @@ async function downloadNote() {
 .content-card, .processing-card, .failed-card { padding: clamp(24px, 3vw, 34px); border-radius: 28px; background: #fff; }
 .content-card h2 { margin: 0 0 20px; font-size: 26px; }
 .content-card pre { max-height: 560px; overflow: auto; margin: 0; color: #57534d; font: inherit; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+.audio-list { margin-top: 24px; padding-top: 20px; border-top: 1px solid #eeeae3; }
+.audio-list h3 { margin: 0 0 12px; font-size: 15px; }
+.audio-part { display: grid; min-height: 48px; align-items: center; grid-template-columns: minmax(110px, 1fr) minmax(120px, 2fr); gap: 12px; color: #77736c; font-size: 12px; }
+.audio-part audio { width: 100%; height: 38px; }
 .note-card { background: #24262d; color: #fff; }
+.generate-box { padding: 28px 0; color: #c3c4c8; line-height: 1.7; }
+.generate-box .note-error { padding: 11px 13px; border-radius: 12px; color: #ffd2c1; background: #4b2a25; }
 .note-card :deep(.el-textarea__inner) { padding: 18px; border: 0; border-radius: 18px; box-shadow: none; line-height: 1.7; }
 .note-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 .note-card :deep(.el-button) { min-height: 44px; margin: 0; }

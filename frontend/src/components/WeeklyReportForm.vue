@@ -9,16 +9,18 @@ const props = withDefaults(defineProps<{
   imported?: DocxImportResult | null
   loading?: boolean
   submitLabel?: string
+  allowMultiple?: boolean
 }>(), {
   initialValue: () => ({}),
   imported: null,
   loading: false,
   submitLabel: '保存周报',
+  allowMultiple: false,
 })
 
 const emit = defineEmits<{
   save: [value: WeeklyReportInput]
-  import: [file: File]
+  import: [files: File[]]
 }>()
 
 const validationMessage = ref('')
@@ -64,13 +66,14 @@ watch(
     form.problems = appendText(form.problems, value.problems)
     form.nextWeekPlan = appendText(form.nextWeekPlan, value.nextWeekPlan)
     form.sourceFileName = value.sourceFileName
+    if (value.weekStartDate) form.weekStartDate = value.weekStartDate
   },
 )
 
 function selectFile(event: Event) {
   const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (file) emit('import', file)
+  const files = Array.from(input.files ?? [])
+  if (files.length) emit('import', files)
   input.value = ''
 }
 
@@ -99,8 +102,8 @@ function submit() {
       </label>
       <label class="upload-button">
         <ElIcon><Upload /></ElIcon>
-        <span>{{ loading ? '处理中…' : '导入 DOCX' }}</span>
-        <input type="file" accept=".docx" :disabled="loading" @change="selectFile" />
+        <span>{{ loading ? '处理中…' : allowMultiple ? '批量导入 DOCX' : '导入 DOCX' }}</span>
+        <input data-test="weekly-docx-input" type="file" accept=".docx" :multiple="allowMultiple" :disabled="loading" @change="selectFile" />
       </label>
     </div>
 

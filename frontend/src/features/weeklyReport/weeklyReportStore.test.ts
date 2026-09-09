@@ -50,6 +50,7 @@ describe('weeklyReportStore', () => {
 
   it('keeps the imported classification ready for the form', async () => {
     const imported: DocxImportResult = {
+      weekStartDate: '2026-08-24',
       coreWork: '完成登录',
       problems: null,
       nextWeekPlan: '开发周报',

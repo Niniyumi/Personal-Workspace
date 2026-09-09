@@ -9,8 +9,8 @@ import com.niniyumi.personalagent.course.domain.CourseRepository;
 import com.niniyumi.personalagent.course.domain.CourseStatus;
 import com.niniyumi.personalagent.course.infrastructure.speech.SpeechProvider;
 import com.niniyumi.personalagent.course.infrastructure.speech.SpeechProviderException;
-import com.niniyumi.personalagent.course.infrastructure.storage.CourseAudioStorage;
 import com.niniyumi.personalagent.weeklyreport.infrastructure.ai.ChatProvider;
+import com.niniyumi.personalagent.weeklyreport.infrastructure.ai.AiProviderException;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 class CourseProcessingServiceTest {
     private final MemoryCourseRepository courses = new MemoryCourseRepository();
     private final MemoryPartRepository parts = new MemoryPartRepository();
-    private final MemoryStorage storage = new MemoryStorage();
     private final Instant now = Instant.parse("2026-08-24T12:00:00Z");
 
     @BeforeEach
@@ -36,20 +35,24 @@ class CourseProcessingServiceTest {
     }
 
     @Test
-    void joinsTranscriptsGeneratesNotesAndDeletesSuccessfulAudio() {
+    void savesTranscriptWithoutGeneratingNotesOrDeletingAudio() {
         SpeechProvider speech = path -> path.toString().endsWith("1.webm") ? "第一部分" : "第二部分";
-        ChatProvider chat = (system, user) -> "# 课程摘要\n整理完成";
+        List<String> noteRequests = new ArrayList<>();
+        ChatProvider chat = (system, user) -> {
+            noteRequests.add(user);
+            return "# 课程摘要\n整理完成";
+        };
         CourseProcessingService service = service(speech, chat);
 
         service.process(42L, 9L);
 
-        assertThat(courses.value.status()).isEqualTo(CourseStatus.READY);
+        assertThat(courses.value.status().name()).isEqualTo("TRANSCRIBED");
         assertThat(courses.value.transcript()).isEqualTo("第一部分\n\n第二部分");
-        assertThat(courses.value.noteContent()).startsWith("# 课程摘要");
+        assertThat(courses.value.noteContent()).isNull();
         assertThat(courses.history).extracting(Course::processingProgress)
-                .containsExactly(10, 43, 75, 85, 100);
-        assertThat(parts.values).isEmpty();
-        assertThat(storage.deleted).containsExactly(Path.of("audio/9/1.webm"), Path.of("audio/9/2.webm"));
+                .containsExactly(10, 43, 75, 100);
+        assertThat(noteRequests).isEmpty();
+        assertThat(parts.values).hasSize(2);
     }
 
     @Test
@@ -60,9 +63,8 @@ class CourseProcessingServiceTest {
         service.process(42L, 9L);
 
         assertThat(courses.value.status()).isEqualTo(CourseStatus.FAILED);
-        assertThat(courses.value.errorMessage()).isEqualTo("转写或笔记生成失败，请重新处理");
+        assertThat(courses.value.errorMessage()).isEqualTo("录音转写失败，请重新处理");
         assertThat(parts.values).hasSize(2);
-        assertThat(storage.deleted).isEmpty();
     }
 
     @Test
@@ -78,18 +80,36 @@ class CourseProcessingServiceTest {
     }
 
     @Test
-    void keepsAReadyResultWhenTemporaryAudioCleanupFails() {
-        storage.failDeletion = true;
-        CourseProcessingService service = service(path -> "课堂内容", (system, user) -> "# 笔记");
+    void generatesANoteFromTheSavedTranscript() {
+        courses.value = new Course(9L, 42L, "计算机网络", CourseStatus.PROCESSING, 600,
+                85, "完整课堂转写", null, null, now, now);
+        CourseProcessingService service = service(path -> "不会执行", (system, user) -> "# 笔记");
 
-        service.process(42L, 9L);
+        service.generateNote(42L, 9L);
 
         assertThat(courses.value.status()).isEqualTo(CourseStatus.READY);
-        assertThat(courses.value.transcript()).isEqualTo("课堂内容\n\n课堂内容");
+        assertThat(courses.value.transcript()).isEqualTo("完整课堂转写");
+        assertThat(courses.value.noteContent()).isEqualTo("# 笔记");
+    }
+
+    @Test
+    void keepsTheTranscriptAvailableWhenNoteGenerationFails() {
+        courses.value = new Course(9L, 42L, "计算机网络", CourseStatus.PROCESSING, 600,
+                85, "完整课堂转写", null, null, now, now);
+        CourseProcessingService service = service(path -> "不会执行", (system, user) -> {
+            throw new AiProviderException("provider unavailable");
+        });
+
+        service.generateNote(42L, 9L);
+
+        assertThat(courses.value.status()).isEqualTo(CourseStatus.TRANSCRIBED);
+        assertThat(courses.value.transcript()).isEqualTo("完整课堂转写");
+        assertThat(courses.value.noteContent()).isNull();
+        assertThat(courses.value.errorMessage()).isEqualTo("笔记生成失败，请重试");
     }
 
     private CourseProcessingService service(SpeechProvider speech, ChatProvider chat) {
-        return new CourseProcessingService(courses, parts, storage, speech, chat,
+        return new CourseProcessingService(courses, parts, speech, chat,
                 Clock.fixed(now.plusSeconds(60), ZoneOffset.UTC));
     }
 
@@ -114,15 +134,4 @@ class CourseProcessingServiceTest {
         public void deleteAllByCourseId(long courseId) { values.clear(); }
     }
 
-    private static final class MemoryStorage implements CourseAudioStorage {
-        private final List<Path> deleted = new ArrayList<>();
-        private boolean failDeletion;
-        public Path store(long userId, long courseId, int partNumber, org.springframework.web.multipart.MultipartFile file) {
-            throw new UnsupportedOperationException();
-        }
-        public void deleteAll(List<Path> paths) {
-            if (failDeletion) throw new RuntimeException("disk busy");
-            deleted.addAll(paths);
-        }
-    }
 }

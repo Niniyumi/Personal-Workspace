@@ -2,11 +2,13 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useAuthStore } from '../auth/authStore'
 import { courseApi } from './courseApi'
-import type { Course, CourseSummary } from './types'
+import type { Course, CourseAudioPart, CourseSummary } from './types'
 
 export const useCourseStore = defineStore('course', () => {
   const courses = ref<CourseSummary[]>([])
   const current = ref<Course | null>(null)
+  const parts = ref<CourseAudioPart[]>([])
+  const audioUrls = ref<Record<number, string>>({})
   const loading = ref(false)
   const error = ref<string | null>(null)
   let generation = 0
@@ -15,6 +17,9 @@ export const useCourseStore = defineStore('course', () => {
     generation += 1
     courses.value = []
     current.value = null
+    Object.values(audioUrls.value).forEach((url) => URL.revokeObjectURL(url))
+    audioUrls.value = {}
+    parts.value = []
     loading.value = false
     error.value = null
   }
@@ -83,6 +88,27 @@ export const useCourseStore = defineStore('course', () => {
     return course
   }
 
+  async function generateNote(courseId: number) {
+    const requestGeneration = generation
+    const course = await request((token) => courseApi.generateNote(token, courseId))
+    if (requestGeneration === generation) current.value = course
+    return course
+  }
+
+  async function loadParts(courseId: number) {
+    const loaded = await request((token) => courseApi.listParts(token, courseId))
+    parts.value = loaded
+    return loaded
+  }
+
+  async function loadAudioPart(courseId: number, partNumber: number) {
+    if (audioUrls.value[partNumber]) return audioUrls.value[partNumber]
+    const blob = await request((token) => courseApi.readAudioPart(token, courseId, partNumber))
+    const url = URL.createObjectURL(blob)
+    audioUrls.value = { ...audioUrls.value, [partNumber]: url }
+    return url
+  }
+
   async function retry(courseId: number) {
     const requestGeneration = generation
     const course = await request((token) => courseApi.retry(token, courseId))
@@ -108,8 +134,8 @@ export const useCourseStore = defineStore('course', () => {
   }
 
   return {
-    courses, current, loading, error, reset, loadAll, loadOne, get: loadOne,
-    create, uploadPart, complete, retry, saveNote, downloadNote,
+    courses, current, parts, audioUrls, loading, error, reset, loadAll, loadOne, get: loadOne,
+    create, uploadPart, complete, generateNote, loadParts, loadAudioPart, retry, saveNote, downloadNote,
   }
 })
 

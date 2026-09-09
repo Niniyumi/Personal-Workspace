@@ -1,14 +1,5 @@
 import { createRouter, createWebHistory, type RouterHistory } from 'vue-router'
 import { useAuthStore } from '../features/auth/authStore'
-import HomeView from '../views/HomeView.vue'
-import LoginView from '../views/LoginView.vue'
-import ForgotPasswordView from '../views/ForgotPasswordView.vue'
-import RegisterView from '../views/RegisterView.vue'
-import WeeklyReportDetailView from '../views/WeeklyReportDetailView.vue'
-import WeeklyReportsView from '../views/WeeklyReportsView.vue'
-import WorkSummariesView from '../views/WorkSummariesView.vue'
-import CoursesView from '../views/CoursesView.vue'
-import CourseDetailView from '../views/CourseDetailView.vue'
 
 export function createAppRouter(history: RouterHistory = createWebHistory()) {
   const router = createRouter({
@@ -17,55 +8,55 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       {
         path: '/',
         name: 'home',
-        component: HomeView,
+        component: () => import('../views/HomeView.vue'),
         meta: { requiresAuth: true },
       },
       {
         path: '/login',
         name: 'login',
-        component: LoginView,
+        component: () => import('../views/LoginView.vue'),
         meta: { guestOnly: true },
       },
       {
         path: '/register',
         name: 'register',
-        component: RegisterView,
+        component: () => import('../views/RegisterView.vue'),
         meta: { guestOnly: true },
       },
       {
         path: '/forgot-password',
         name: 'forgot-password',
-        component: ForgotPasswordView,
+        component: () => import('../views/ForgotPasswordView.vue'),
         meta: { guestOnly: true },
       },
       {
         path: '/weekly-reports',
         name: 'weekly-reports',
-        component: WeeklyReportsView,
+        component: () => import('../views/WeeklyReportsView.vue'),
         meta: { requiresAuth: true },
       },
       {
         path: '/weekly-reports/:id',
         name: 'weekly-report-detail',
-        component: WeeklyReportDetailView,
+        component: () => import('../views/WeeklyReportDetailView.vue'),
         meta: { requiresAuth: true },
       },
       {
         path: '/work-summaries',
         name: 'work-summaries',
-        component: WorkSummariesView,
+        component: () => import('../views/WorkSummariesView.vue'),
         meta: { requiresAuth: true },
       },
       {
         path: '/courses',
         name: 'courses',
-        component: CoursesView,
+        component: () => import('../views/CoursesView.vue'),
         meta: { requiresAuth: true },
       },
       {
         path: '/courses/:id',
         name: 'course-detail',
-        component: CourseDetailView,
+        component: () => import('../views/CourseDetailView.vue'),
         meta: { requiresAuth: true },
       },
       { path: '/:pathMatch(.*)*', redirect: '/' },

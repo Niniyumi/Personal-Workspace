@@ -18,6 +18,7 @@ export interface WeeklyReportInput {
 }
 
 export interface DocxImportResult {
+  weekStartDate: string | null
   coreWork: string
   problems: string | null
   nextWeekPlan: string | null

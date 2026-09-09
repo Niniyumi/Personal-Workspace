@@ -7,5 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 public interface CourseAudioStorage {
     Path store(long userId, long courseId, int partNumber, MultipartFile file);
 
+    byte[] read(Path path);
+
     void deleteAll(List<Path> paths);
 }

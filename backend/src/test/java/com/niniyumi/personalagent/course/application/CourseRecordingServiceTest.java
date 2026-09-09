@@ -104,6 +104,11 @@ class CourseRecordingServiceTest {
         }
 
         @Override
+        public byte[] read(Path path) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public void deleteAll(List<Path> paths) {
             storedPaths.removeAll(paths);
         }

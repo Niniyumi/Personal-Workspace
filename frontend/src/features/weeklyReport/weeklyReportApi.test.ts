@@ -59,6 +59,7 @@ describe('weeklyReportApi', () => {
   it('uploads a docx under the file multipart field', async () => {
     const file = new File(['docx'], 'week-34.docx')
     const classification = {
+      weekStartDate: '2026-08-24',
       coreWork: '完成登录',
       problems: null,
       nextWeekPlan: '开发周报',

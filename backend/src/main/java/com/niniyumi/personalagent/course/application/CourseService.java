@@ -50,6 +50,18 @@ public class CourseService {
         return repository.update(updated);
     }
 
+    public Course beginNoteGeneration(long userId, long courseId) {
+        Course current = get(userId, courseId);
+        if (current.status() != CourseStatus.TRANSCRIBED
+                || current.transcript() == null || current.transcript().isBlank()) {
+            throw new InvalidCourseStateException();
+        }
+        return repository.update(new Course(
+                current.id(), current.userId(), current.title(), CourseStatus.PROCESSING,
+                current.durationSeconds(), 85, current.transcript(), null, null,
+                current.createdAt(), clock.instant()));
+    }
+
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }

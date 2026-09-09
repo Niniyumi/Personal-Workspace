@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
   saveNote: vi.fn(),
   retry: vi.fn(),
   downloadNote: vi.fn(),
+  generateNote: vi.fn(),
+  loadParts: vi.fn(),
+  loadAudioPart: vi.fn(),
   store: {
     current: null as Record<string, unknown> | null,
     error: null as string | null,
@@ -15,6 +18,10 @@ const mocks = vi.hoisted(() => ({
     saveNote: vi.fn(),
     retry: vi.fn(),
     downloadNote: vi.fn(),
+    generateNote: vi.fn(),
+    loadParts: vi.fn(),
+    loadAudioPart: vi.fn(),
+    parts: [{ id: 1, partNumber: 1, durationSeconds: 120, fileSize: 5 }],
   },
 }))
 
@@ -30,6 +37,9 @@ beforeEach(() => {
   mocks.store.saveNote = mocks.saveNote
   mocks.store.retry = mocks.retry
   mocks.store.downloadNote = mocks.downloadNote
+  mocks.store.generateNote = mocks.generateNote
+  mocks.store.loadParts = mocks.loadParts
+  mocks.store.loadAudioPart = mocks.loadAudioPart
   mocks.store.current = {
     id: 9,
     title: 'Java 并发课',
@@ -44,6 +54,9 @@ beforeEach(() => {
   mocks.saveNote.mockResolvedValue(mocks.store.current)
   mocks.retry.mockResolvedValue(mocks.store.current)
   mocks.downloadNote.mockResolvedValue(undefined)
+  mocks.generateNote.mockResolvedValue(mocks.store.current)
+  mocks.loadParts.mockResolvedValue(mocks.store.parts)
+  mocks.loadAudioPart.mockResolvedValue('blob:audio')
 })
 
 describe('CourseDetailView', () => {
@@ -86,5 +99,43 @@ describe('CourseDetailView', () => {
     await wrapper.get('[data-test="download-course-note"]').trigger('click')
 
     expect(mocks.downloadNote).toHaveBeenCalledWith(9, 'Java 并发课')
+  })
+
+  it('lets the user generate notes only after transcription is saved', async () => {
+    mocks.store.current = { ...mocks.store.current, status: 'TRANSCRIBED', noteContent: null }
+    mocks.loadOne.mockResolvedValue(mocks.store.current)
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('完整转写')
+    await wrapper.get('[data-test="generate-course-note"]').trigger('click')
+
+    expect(mocks.generateNote).toHaveBeenCalledWith(9)
+  })
+
+  it('keeps original audio available for playback', async () => {
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    await wrapper.get('[data-test="load-course-audio-1"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.loadAudioPart).toHaveBeenCalledWith(9, 1)
+    expect(wrapper.get('audio').attributes('src')).toBe('blob:audio')
+  })
+
+  it('shows note generation failure without hiding the saved transcript', async () => {
+    mocks.store.current = {
+      ...mocks.store.current,
+      status: 'TRANSCRIBED',
+      noteContent: null,
+      errorMessage: '笔记生成失败，请重试',
+    }
+    mocks.loadOne.mockResolvedValue(mocks.store.current)
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('完整转写')
+    expect(wrapper.get('[data-test="note-generation-error"]').text()).toContain('笔记生成失败，请重试')
   })
 })

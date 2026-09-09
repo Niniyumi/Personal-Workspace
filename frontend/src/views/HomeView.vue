@@ -1,139 +1,99 @@
 <script setup lang="ts">
-import {
-  ChatDotRound,
-  Document,
-  FolderOpened,
-  HomeFilled,
-  Mic,
-  Promotion,
-  Search,
-  SwitchButton,
-  Upload,
-  UserFilled,
-} from '@element-plus/icons-vue'
-import { ElAvatar, ElButton, ElIcon, ElInput, ElTag } from 'element-plus'
+import { ChatDotRound, Document, FolderOpened, HomeFilled, Mic, SwitchButton, UserFilled } from '@element-plus/icons-vue'
+import { ElAvatar, ElButton, ElIcon } from 'element-plus'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import ActivityChart from '../components/ActivityChart.vue'
 import { useAuthStore } from '../features/auth/authStore'
+import { useDashboardStore } from '../features/dashboard/dashboardStore'
 
-const store = useAuthStore()
+const auth = useAuthStore()
+const dashboard = useDashboardStore()
 const router = useRouter()
 
-const recentItems = [
-  { title: '账号与登录', type: '已完成', time: '当前阶段' },
-  { title: '结构化周报', type: '准备开发', time: '下一阶段' },
-  { title: '课程笔记', type: '开发中', time: '当前阶段' },
-]
+const totalMinutes = computed(() => Math.round((dashboard.data?.totalRecordingSeconds ?? 0) / 60))
+const monthMinutes = computed(() => Math.round((dashboard.data?.monthRecordingSeconds ?? 0) / 60))
+const recentTarget = (item: { type: string; id: number }) => item.type === 'COURSE'
+  ? { name: 'course-detail', params: { id: item.id } }
+  : { name: 'weekly-report-detail', params: { id: item.id } }
+const formatDate = (value: string) => new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric' }).format(new Date(value))
+
+onMounted(() => dashboard.load())
 
 async function logout() {
-  await store.logout()
+  await auth.logout()
   await router.push({ name: 'login' })
 }
 
-function openWeeklyReports() {
-  void router.push({ name: 'weekly-reports' })
-}
-
-function openWorkSummaries() {
-  void router.push({ name: 'work-summaries' })
-}
-
-function openCourses() {
-  void router.push({ name: 'courses' })
-}
+const openWeeklyReports = () => router.push({ name: 'weekly-reports' })
+const openWorkSummaries = () => router.push({ name: 'work-summaries' })
+const openCourses = () => router.push({ name: 'courses' })
 </script>
 
 <template>
-  <div class="workspace-page">
-    <div class="workspace-shell">
-      <aside class="workspace-sidebar">
-        <div class="workspace-brand"><span class="workspace-logo">P</span><span>Personal Agent</span></div>
+  <div class="page">
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand"><span class="logo">P</span><span>Personal Agent</span></div>
         <nav aria-label="主要导航">
-          <a class="workspace-nav active" href="#workspace"><ElIcon><HomeFilled /></ElIcon><span>工作台</span></a>
-          <button class="workspace-nav nav-button" type="button" @click="openWeeklyReports"><ElIcon><ChatDotRound /></ElIcon><span>周报助手</span></button>
-          <button class="workspace-nav nav-button" type="button" @click="openCourses"><ElIcon><Mic /></ElIcon><span>课程笔记</span></button>
-          <a class="workspace-nav" href="#archive"><ElIcon><FolderOpened /></ElIcon><span>资料归档</span></a>
+          <RouterLink class="nav active" to="/"><ElIcon><HomeFilled /></ElIcon><span>工作台</span></RouterLink>
+          <RouterLink class="nav" :to="{ name: 'weekly-reports' }"><ElIcon><ChatDotRound /></ElIcon><span>周报</span></RouterLink>
+          <RouterLink class="nav" :to="{ name: 'courses' }"><ElIcon><Mic /></ElIcon><span>课程笔记</span></RouterLink>
+          <RouterLink class="nav" :to="{ name: 'work-summaries' }"><ElIcon><FolderOpened /></ElIcon><span>工作总结</span></RouterLink>
         </nav>
-        <div class="sidebar-spacer"></div>
-        <div class="workspace-profile">
-          <ElAvatar :size="42" :icon="UserFilled" aria-label="默认用户头像" />
-          <div><strong>{{ store.user?.displayName }}</strong><span>{{ store.user?.email }}</span></div>
+        <div class="profile">
+          <ElAvatar :size="40" :icon="UserFilled" aria-label="默认用户头像" />
+          <div><strong>{{ auth.user?.displayName }}</strong><span>{{ auth.user?.email }}</span></div>
         </div>
       </aside>
 
-      <main id="workspace" class="workspace-main">
-        <header class="workspace-header">
-          <div>
-            <p>个人工作台 / PERSONAL AGENT</p>
-            <h1>今天想整理些什么？</h1>
-            <span>你好，{{ store.user?.displayName }}。今天也交给 Agent 整理。</span>
-          </div>
-          <div class="header-actions">
-            <ElInput class="search-input" placeholder="搜索你的资料" :prefix-icon="Search" disabled />
-            <ElButton data-test="logout" round :icon="SwitchButton" @click="logout">退出登录</ElButton>
-          </div>
+      <main>
+        <header>
+          <div><p>个人工作台</p><h1>今天想整理些什么？</h1><span>你好，{{ auth.user?.displayName }}。</span></div>
+          <ElButton data-test="logout" round :icon="SwitchButton" @click="logout">退出登录</ElButton>
         </header>
 
-        <section class="dashboard-grid">
-          <article class="agent-panel">
-            <div class="panel-heading">
-              <div><ElTag round effect="dark">WEEKLY REPORT</ElTag><h2>写下本周进展</h2></div>
-              <span class="panel-number">01</span>
-            </div>
-            <ElInput
-              type="textarea"
-              :rows="4"
-              resize="none"
-              placeholder="例如：这周完成了登录模块，下一步准备整理周报……"
-              disabled
-            />
-            <div class="composer-actions">
-              <ElButton round :icon="Upload" disabled>上传文档</ElButton>
-              <ElButton class="send-button" round type="primary" :icon="Promotion" disabled>发送</ElButton>
-            </div>
+        <div v-if="dashboard.error" class="error" role="alert">
+          {{ dashboard.error }} <button type="button" @click="dashboard.load">重新加载</button>
+        </div>
+
+        <section class="grid" :class="{ loading: dashboard.loading }">
+          <article class="trend card">
+            <div class="heading"><div><span class="eyebrow">近六个月</span><h2>内容记录趋势</h2></div><div class="legend"><span><i class="orange"></i>周报</span><span><i class="yellow"></i>笔记</span></div></div>
+            <ActivityChart :points="dashboard.data?.monthlyActivity ?? []" />
           </article>
 
-          <article class="progress-panel">
-            <div class="dark-heading">
-              <div><span class="progress-label">开发进度 / PROGRESS</span><strong>33%</strong></div>
-              <ElTag class="phase-tag" round color="#ffd84d">PHASE 01</ElTag>
-            </div>
-            <div class="progress-ring"><span>1</span><small>项完成</small></div>
-            <ul>
-              <li><span>账号与安全</span><strong>完成</strong></li>
-              <li><span>结构化周报</span><strong>准备开发</strong></li>
-              <li><span>课程笔记</span><strong>后续阶段</strong></li>
-            </ul>
+          <article class="month-card">
+            <span>本月概览</span><h2>{{ dashboard.data?.monthWeeklyReports ?? 0 }} 份周报</h2>
+            <dl>
+              <div><dt>课程笔记</dt><dd>{{ dashboard.data?.monthCourseNotes ?? 0 }} 篇</dd></div>
+              <div><dt>录音时长</dt><dd>{{ monthMinutes }} 分钟</dd></div>
+            </dl>
           </article>
 
-          <article id="weekly" class="feature-card">
-            <div class="feature-icon orange"><ElIcon><Document /></ElIcon></div>
-            <span class="card-index">02</span>
-            <h3>周报助手 / WEEKLY REPORT</h3>
-            <p>记录本周工作，并按月份查阅。</p>
-            <div class="feature-actions">
-              <ElButton data-test="open-weekly-reports" round @click="openWeeklyReports">开始填写</ElButton>
-              <ElButton data-test="open-work-summaries" round @click="openWorkSummaries">工作总结</ElButton>
+          <article class="feature card">
+            <div class="icon orange-bg"><ElIcon><Document /></ElIcon></div>
+            <span class="eyebrow">周报</span><h2>{{ dashboard.data?.totalWeeklyReports ?? 0 }} 份周报</h2>
+            <p>记录工作进展，按季度或年度汇总。</p>
+            <div class="actions">
+              <ElButton data-test="open-weekly-reports" round @click="openWeeklyReports">写周报</ElButton>
+              <ElButton data-test="open-work-summaries" round @click="openWorkSummaries">查看总结</ElButton>
             </div>
           </article>
 
-          <article id="course" class="feature-card">
-            <div class="feature-icon yellow"><ElIcon><Mic /></ElIcon></div>
-            <span class="card-index">03</span>
-            <h3>课程笔记 / COURSE NOTES</h3>
-            <p>录音转写并整理课程重点。</p>
-            <ElButton data-test="open-courses" round @click="openCourses">开始录音</ElButton>
-            <ElButton round disabled>后续阶段</ElButton>
+          <article class="feature card">
+            <div class="icon yellow-bg"><ElIcon><Mic /></ElIcon></div>
+            <span class="eyebrow">课程笔记</span><h2>{{ dashboard.data?.totalCourseNotes ?? 0 }} 篇笔记</h2>
+            <p>已保存 {{ totalMinutes }} 分钟录音，可随时回听原始内容。</p>
+            <ElButton data-test="open-courses" round @click="openCourses">查看课程</ElButton>
           </article>
 
-          <article id="archive" class="recent-card">
-            <div class="recent-heading"><h3>最近进度 / RECENT</h3></div>
-            <ul>
-              <li v-for="item in recentItems" :key="item.title">
-                <span class="file-dot"></span>
-                <div><strong>{{ item.title }}</strong><span>{{ item.type }}</span></div>
-                <time>{{ item.time }}</time>
-              </li>
-            </ul>
+          <article class="recent card">
+            <div class="heading"><h2>最近更新</h2></div>
+            <p v-if="!dashboard.data?.recentItems.length" class="empty">还没有内容，先写一份周报或录一节课吧。</p>
+            <RouterLink v-for="item in dashboard.data?.recentItems" :key="`${item.type}-${item.id}`" class="recent-item" :to="recentTarget(item)">
+              <i></i><div><strong>{{ item.title }}</strong><span>{{ item.type === 'COURSE' ? '课程笔记' : '周报' }}</span></div><time>{{ formatDate(item.updatedAt) }}</time>
+            </RouterLink>
           </article>
         </section>
       </main>
@@ -142,128 +102,5 @@ function openCourses() {
 </template>
 
 <style scoped>
-.workspace-page {
-  min-height: 100vh;
-  padding: clamp(18px, 3vw, 44px);
-  color: #17181c;
-  background: #d8d5cf;
-  --el-color-primary: #17181c;
-  --el-color-primary-light-3: #3b3c42;
-  --el-color-primary-light-5: #66676c;
-  --el-color-primary-light-7: #a7a7aa;
-  --el-color-primary-light-9: #eeeeec;
-  --el-border-radius-base: 14px;
-}
-
-.workspace-shell {
-  display: grid;
-  width: min(1480px, 100%);
-  min-height: calc(100vh - clamp(36px, 6vw, 88px));
-  margin: 0 auto;
-  overflow: hidden;
-  grid-template-columns: 238px minmax(0, 1fr);
-  border-radius: 34px;
-  background: #f5f2ec;
-  box-shadow: 0 30px 70px rgb(35 32 27 / 16%);
-}
-
-.workspace-sidebar {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  padding: 30px 22px 24px;
-  border-right: 1px solid #e1ddd5;
-  background: #fbfaf7;
-}
-
-.workspace-brand { display: flex; align-items: center; gap: 11px; padding: 0 8px; font-weight: 800; letter-spacing: -0.03em; }
-.workspace-logo { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 14px; background: #ffd84d; font-weight: 900; }
-.workspace-sidebar nav { display: grid; gap: 8px; margin-top: 54px; }
-.workspace-nav { display: flex; min-height: 48px; align-items: center; gap: 12px; padding: 0 16px; border-radius: 18px; color: #66645f; font-size: 14px; text-decoration: none; }
-.nav-button { width: 100%; border: 0; background: transparent; cursor: pointer; }
-.workspace-nav.active { color: #17181c; background: #e7e3dc; font-weight: 750; }
-.sidebar-spacer { flex: 1; }
-.workspace-profile { display: flex; align-items: center; gap: 10px; }
-.workspace-profile :deep(.el-avatar) { color: #fff; background: #f05a18; }
-.workspace-profile div { min-width: 0; }
-.workspace-profile strong, .workspace-profile span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.workspace-profile span { margin-top: 3px; color: #88857e; font-size: 11px; }
-
-.workspace-main { min-width: 0; padding: 38px clamp(24px, 4vw, 54px) 44px; }
-.workspace-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 28px; }
-.workspace-header p { margin: 0 0 10px; color: #f05a18; font-size: 11px; font-weight: 800; letter-spacing: .15em; }
-.workspace-header h1 { margin: 0; font-size: clamp(30px, 3.4vw, 48px); letter-spacing: -.055em; }
-.workspace-header span { display: block; margin-top: 10px; color: #77746e; line-height: 1.6; }
-.header-actions { display: flex; align-items: center; gap: 12px; }
-.header-actions :deep(.el-button) { min-height: 48px; padding-inline: 18px; }
-.search-input { width: min(280px, 25vw); }
-.search-input :deep(.el-input__wrapper) { min-height: 48px; padding: 0 18px; border-radius: 24px; box-shadow: none; background: #fff; }
-
-.dashboard-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; margin-top: 38px; }
-.dashboard-grid article { overflow: hidden; }
-.agent-panel, .feature-card, .recent-card { background: #fff; }
-.agent-panel { grid-column: span 8; padding: clamp(24px, 3vw, 38px); border-radius: 30px; }
-.progress-panel { grid-column: span 4; padding: 28px; border-radius: 30px; color: #fff; background: #24262d; }
-.panel-heading, .dark-heading, .recent-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
-.panel-heading h2 { margin: 16px 0 24px; font-size: clamp(24px, 2.6vw, 36px); letter-spacing: -.04em; }
-.panel-number { color: #bbb5aa; font-size: 42px; font-weight: 850; }
-.agent-panel :deep(.el-textarea__inner) { padding: 18px; border: 0; border-radius: 20px; box-shadow: none; background: #f1eee8; line-height: 1.7; }
-.composer-actions { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
-.composer-actions :deep(.el-button) { min-height: 44px; padding-inline: 20px; }
-.send-button { min-width: 108px; margin-left: auto; }
-
-.progress-label { display: block; color: #b9bac0; font-size: 13px; }
-.dark-heading strong { display: block; margin-top: 5px; font-size: 34px; }
-.dark-heading :deep(.phase-tag) { display: inline-flex; height: 36px; flex-shrink: 0; align-items: center; justify-content: center; padding: 0 16px; border: 0; color: #17181c; line-height: 1; white-space: nowrap; }
-.dark-heading :deep(.phase-tag .el-tag__content) { display: flex; align-items: center; line-height: 1; }
-.progress-ring { display: grid; width: 126px; height: 126px; margin: 26px auto; place-content: center; border: 13px solid #34363e; border-top-color: #ffd84d; border-right-color: #f05a18; border-radius: 50%; text-align: center; }
-.progress-ring span { font-size: 32px; font-weight: 850; }
-.progress-ring small { color: #b9bac0; }
-.progress-panel ul, .recent-card ul { margin: 0; padding: 0; list-style: none; }
-.progress-panel li { display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid #3b3d45; color: #c8c9cc; font-size: 12px; }
-.progress-panel li strong { color: #fff; }
-
-.feature-card { grid-column: span 4; min-height: 260px; padding: 28px; border-radius: 26px; }
-.feature-icon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 17px; font-size: 22px; }
-.feature-icon.orange { color: #fff; background: #f05a18; }
-.feature-icon.yellow { color: #17181c; background: #ffd84d; }
-.card-index { display: block; margin-top: 22px; color: #8a867e; font-size: 10px; font-weight: 800; letter-spacing: .1em; }
-.feature-card h3 { margin: 8px 0 0; font-size: 24px; }
-.feature-card p { min-height: 66px; margin: 12px 0 18px; color: #74716a; font-size: 13px; line-height: 1.7; }
-.feature-card :deep(.el-button) { min-height: 42px; }
-.feature-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.feature-actions :deep(.el-button) { margin: 0; }
-
-.recent-card { grid-column: span 4; padding: 26px; border-radius: 26px; }
-.recent-heading h3 { margin: 0; font-size: 24px; }
-.recent-card li { display: grid; min-height: 58px; align-items: center; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 11px; border-top: 1px solid #eeece7; }
-.file-dot { width: 7px; height: 7px; border-radius: 50%; background: #f05a18; }
-.recent-card strong, .recent-card li span { display: block; }
-.recent-card li span, .recent-card time { margin-top: 3px; color: #8d8981; font-size: 10px; }
-
-@media (max-width: 1050px) {
-  .workspace-shell { grid-template-columns: 92px minmax(0, 1fr); }
-  .workspace-sidebar { align-items: center; padding-inline: 16px; }
-  .workspace-brand > span:last-child, .workspace-nav span, .workspace-profile div { display: none; }
-  .workspace-sidebar nav { width: 100%; }
-  .workspace-nav { justify-content: center; padding: 0; font-size: 18px; }
-  .agent-panel, .progress-panel { grid-column: span 12; }
-  .feature-card, .recent-card { grid-column: span 6; }
-  .header-actions { align-items: flex-end; flex-direction: column; }
-  .search-input { width: min(280px, 34vw); }
-}
-
-@media (max-width: 720px) {
-  .workspace-page { padding: 0; }
-  .workspace-shell { display: block; min-height: 100vh; border-radius: 0; }
-  .workspace-sidebar { display: none; }
-  .workspace-main { padding: 24px 16px 32px; }
-  .workspace-header { display: block; }
-  .header-actions { display: grid; align-items: stretch; margin-top: 20px; }
-  .search-input { width: 100%; }
-  .dashboard-grid { margin-top: 24px; }
-  .feature-card, .recent-card { grid-column: span 12; }
-  .composer-actions { align-items: stretch; flex-direction: column; }
-  .composer-actions :deep(.el-button) { width: 100%; margin: 0; }
-}
+.page{min-height:100vh;padding:clamp(16px,3vw,42px);color:#17181c;background:#d8d5cf;--el-color-primary:#17181c}.shell{display:grid;width:min(1480px,100%);min-height:calc(100vh - 84px);margin:auto;grid-template-columns:230px minmax(0,1fr);overflow:hidden;border-radius:32px;background:#f5f2ec;box-shadow:0 28px 65px rgb(35 32 27 / 14%)}.sidebar{display:flex;flex-direction:column;padding:30px 22px 24px;border-right:1px solid #e1ddd5;background:#fbfaf7}.brand{display:flex;align-items:center;gap:11px;padding:0 8px;font-weight:800}.logo{display:grid;width:38px;height:38px;place-items:center;border-radius:14px;background:#ffd84d}.sidebar nav{display:grid;gap:8px;margin-top:52px}.nav{display:flex;min-height:48px;align-items:center;gap:12px;padding:0 16px;border-radius:18px;color:#66645f;text-decoration:none}.nav.active{color:#17181c;background:#e7e3dc;font-weight:750}.profile{display:flex;align-items:center;gap:10px;margin-top:auto}.profile :deep(.el-avatar){color:#fff;background:#f05a18}.profile div{min-width:0}.profile strong,.profile span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile span{margin-top:3px;color:#88857e;font-size:11px}main{min-width:0;padding:38px clamp(24px,4vw,54px) 44px}header,.heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}header p{margin:0 0 8px;color:#f05a18;font-size:12px;font-weight:800}header h1{margin:0;font-size:clamp(30px,3.4vw,48px);letter-spacing:-.055em}header span{display:block;margin-top:9px;color:#77746e}.error{margin-top:24px;padding:12px 16px;border-radius:12px;color:#8c2e0a;background:#fff1eb}.error button{border:0;color:inherit;background:transparent;text-decoration:underline;cursor:pointer}.grid{display:grid;margin-top:34px;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px;transition:opacity .2s}.grid.loading{opacity:.55}.card{padding:28px;border-radius:26px;background:#fff}.trend{grid-column:span 8}.trend h2,.recent h2{margin:7px 0 22px;font-size:27px}.eyebrow{color:#8a867e;font-size:11px;font-weight:800}.legend{display:flex;gap:14px;color:#77746e;font-size:12px}.legend span{display:flex;align-items:center;gap:6px}.legend i{width:9px;height:9px;border-radius:3px}.orange{background:#f05a18}.yellow{background:#ffd84d}.month-card{grid-column:span 4;padding:28px;border-radius:26px;color:#fff;background:#24262d}.month-card>span{color:#b9bac0;font-size:13px}.month-card h2{margin:10px 0 34px;font-size:34px}.month-card dl{margin:0}.month-card dl div{display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid #3b3d45}.month-card dt{color:#b9bac0}.month-card dd{margin:0;font-weight:750}.feature{grid-column:span 4;min-height:225px}.icon{display:grid;width:48px;height:48px;place-items:center;margin-bottom:24px;border-radius:17px;font-size:22px}.orange-bg{color:#fff;background:#f05a18}.yellow-bg{background:#ffd84d}.feature h2{margin:8px 0;font-size:25px}.feature p{min-height:46px;color:#74716a;line-height:1.65}.actions{display:flex;flex-wrap:wrap;gap:8px}.actions :deep(.el-button){margin:0}.recent{grid-column:span 4}.recent-item{display:grid;min-height:58px;align-items:center;grid-template-columns:8px minmax(0,1fr) auto;gap:11px;border-top:1px solid #eeece7;color:inherit;text-decoration:none}.recent-item>i{width:7px;height:7px;border-radius:50%;background:#f05a18}.recent-item strong,.recent-item span{display:block}.recent-item span,.recent-item time,.empty{margin-top:3px;color:#8d8981;font-size:11px}.empty{line-height:1.7}@media(max-width:1000px){.shell{grid-template-columns:86px minmax(0,1fr)}.sidebar{align-items:center;padding-inline:14px}.brand>span:last-child,.nav span,.profile div{display:none}.sidebar nav{width:100%}.nav{justify-content:center;padding:0}.trend,.month-card{grid-column:span 12}.feature,.recent{grid-column:span 6}}@media(max-width:700px){.page{padding:0}.shell{display:block;min-height:100vh;border-radius:0}.sidebar{display:none}main{padding:24px 16px}header{align-items:flex-end}.feature,.recent{grid-column:span 12}.card,.month-card{padding:22px}}
 </style>

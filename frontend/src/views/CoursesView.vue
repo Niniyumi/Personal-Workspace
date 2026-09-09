@@ -21,7 +21,8 @@ const timeText = computed(() => {
 
 const statusText: Record<CourseStatus, string> = {
   RECORDING: '录音中',
-  PROCESSING: '整理中',
+  PROCESSING: '正在提取文字',
+  TRANSCRIBED: '文字已提取',
   READY: '已完成',
   FAILED: '处理失败',
 }
@@ -62,16 +63,16 @@ function formatDuration(seconds: number) {
       <header class="course-header">
         <div>
           <RouterLink class="back-link" :to="{ name: 'home' }"><ElIcon><ArrowLeft /></ElIcon> 返回工作台</RouterLink>
-          <p>COURSE NOTE AGENT</p>
-          <h1>录下课堂，整理成你的笔记。</h1>
-          <span>最长 90 分钟。录音结束后统一转写，不打断上课节奏。</span>
+          <p>课程笔记</p>
+          <h1>录下课程内容</h1>
+          <span>结束后先保存录音和文字，再由你决定是否生成笔记。</span>
         </div>
         <div class="header-mark"><ElIcon><Headset /></ElIcon></div>
       </header>
 
       <main class="course-layout">
         <section class="recorder-card" aria-live="polite">
-          <div class="card-heading"><span>NEW RECORDING</span><h2>开始一节课程</h2></div>
+          <div class="card-heading"><span>新录音</span><h2>开始一节课程</h2></div>
           <label class="field-label" for="course-title">课程名称</label>
           <ElInput
             id="course-title"
@@ -86,7 +87,7 @@ function formatDuration(seconds: number) {
             <span class="record-dot" aria-hidden="true"></span>
             <strong>{{ timeText }}</strong>
             <small>
-              {{ recorder.status.value === 'idle' ? '等待开始' : recorder.status.value === 'processing' ? '正在生成笔记' : `已上传 ${recorder.uploadedParts.value} 个分片` }}
+              {{ recorder.status.value === 'idle' ? '等待开始' : recorder.status.value === 'processing' ? '正在提取文字' : `已上传 ${recorder.uploadedParts.value} 个分片` }}
             </small>
           </div>
 
@@ -111,13 +112,13 @@ function formatDuration(seconds: number) {
               <ElButton v-else round @click="recorder.resume">
                 <ElIcon><VideoPlay /></ElIcon>继续
               </ElButton>
-              <ElButton type="danger" round @click="stopRecording">结束并整理</ElButton>
+              <ElButton type="danger" round @click="stopRecording">结束录音</ElButton>
             </template>
           </div>
         </section>
 
         <aside class="history-card">
-          <div class="history-heading"><span>ARCHIVE</span><h2>课程记录</h2></div>
+          <div class="history-heading"><span>已保存</span><h2>课程记录</h2></div>
           <div v-if="store.courses.length" class="course-list">
             <article v-for="course in store.courses" :key="course.id">
               <div>
@@ -128,7 +129,7 @@ function formatDuration(seconds: number) {
               </div>
               <h3>{{ course.title }}</h3>
               <p>{{ formatDuration(course.durationSeconds) }}</p>
-              <RouterLink :to="{ name: 'course-detail', params: { id: course.id } }">查看笔记 →</RouterLink>
+              <RouterLink :to="{ name: 'course-detail', params: { id: course.id } }">查看内容 →</RouterLink>
             </article>
           </div>
           <div v-else class="empty-state">还没有课程记录，从左侧开始第一节课。</div>

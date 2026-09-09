@@ -1,4 +1,4 @@
-export type CourseStatus = 'RECORDING' | 'PROCESSING' | 'READY' | 'FAILED'
+export type CourseStatus = 'RECORDING' | 'PROCESSING' | 'TRANSCRIBED' | 'READY' | 'FAILED'
 
 export interface Course {
   id: number

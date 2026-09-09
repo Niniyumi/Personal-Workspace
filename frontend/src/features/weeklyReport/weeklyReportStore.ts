@@ -56,9 +56,13 @@ export const useWeeklyReportStore = defineStore('weeklyReport', () => {
   }
 
   async function importDocx(file: File): Promise<DocxImportResult | null> {
-    const result = await request((token) => weeklyReportApi.importDocx(token, file))
+    const result = await recognizeDocx(file)
     if (result !== null) imported.value = result
     return result
+  }
+
+  async function recognizeDocx(file: File): Promise<DocxImportResult | null> {
+    return request((token) => weeklyReportApi.importDocx(token, file))
   }
 
   return {
@@ -72,5 +76,6 @@ export const useWeeklyReportStore = defineStore('weeklyReport', () => {
     create,
     update,
     importDocx,
+    recognizeDocx,
   }
 })

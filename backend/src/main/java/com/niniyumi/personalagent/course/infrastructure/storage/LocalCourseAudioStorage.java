@@ -32,6 +32,19 @@ public class LocalCourseAudioStorage implements CourseAudioStorage {
     }
 
     @Override
+    public byte[] read(Path path) {
+        Path normalized = path.toAbsolutePath().normalize();
+        if (!normalized.startsWith(root)) {
+            throw new CourseStorageException(new IOException("Audio path is outside storage root"));
+        }
+        try {
+            return Files.readAllBytes(normalized);
+        } catch (IOException exception) {
+            throw new CourseStorageException(exception);
+        }
+    }
+
+    @Override
     public void deleteAll(List<Path> paths) {
         try {
             for (Path path : paths) {

@@ -51,8 +51,9 @@ describe('courseApi', () => {
     await expect(api.uploadPart('access-token', 9, 2, 120, audio)).resolves.toMatchObject({ partNumber: 2 })
   })
 
-  it('completes, retries and saves notes', async () => {
+  it('completes transcription, generates a note, retries and saves notes', async () => {
     mock.onPost('/courses/9/complete').reply(202, { ...course, status: 'PROCESSING' })
+    mock.onPost('/courses/9/note/generate').reply(202, { ...course, status: 'PROCESSING', transcript: '转写' })
     mock.onPost('/courses/9/retry').reply(202, { ...course, status: 'PROCESSING' })
     mock.onPut('/courses/9/note', { noteContent: '# 新笔记' }).reply(200, {
       ...course,
@@ -61,8 +62,22 @@ describe('courseApi', () => {
     })
 
     await expect(api.complete('access-token', 9)).resolves.toMatchObject({ status: 'PROCESSING' })
+    await expect(api.generateNote('access-token', 9)).resolves.toMatchObject({ transcript: '转写' })
     await expect(api.retry('access-token', 9)).resolves.toMatchObject({ status: 'PROCESSING' })
     await expect(api.saveNote('access-token', 9, '# 新笔记')).resolves.toMatchObject({ noteContent: '# 新笔记' })
+  })
+
+  it('lists and downloads retained audio parts', async () => {
+    const parts = [{ id: 3, partNumber: 1, durationSeconds: 120, fileSize: 5 }]
+    mock.onGet('/courses/9/parts').reply(200, parts)
+    mock.onGet('/courses/9/parts/1/audio').reply((config) => {
+      expect(config.headers?.Authorization).toBe('Bearer access-token')
+      expect(config.responseType).toBe('blob')
+      return [200, new Blob(['audio'], { type: 'audio/webm' })]
+    })
+
+    await expect(api.listParts('access-token', 9)).resolves.toEqual(parts)
+    await expect(api.readAudioPart('access-token', 9, 1)).resolves.toBeInstanceOf(Blob)
   })
 
   it('downloads the generated note as a docx blob', async () => {

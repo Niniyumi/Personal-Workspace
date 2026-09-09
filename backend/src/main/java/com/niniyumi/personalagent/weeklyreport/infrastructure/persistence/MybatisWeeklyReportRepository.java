@@ -61,4 +61,14 @@ public class MybatisWeeklyReportRepository implements WeeklyReportRepository {
                 .map(WeeklyReportRow::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<WeeklyReport> findAllByUserId(long userId) {
+        return mapper.selectList(new LambdaQueryWrapper<WeeklyReportRow>()
+                        .eq(WeeklyReportRow::getUserId, userId)
+                        .orderByDesc(WeeklyReportRow::getUpdatedAt))
+                .stream()
+                .map(WeeklyReportRow::toDomain)
+                .toList();
+    }
 }

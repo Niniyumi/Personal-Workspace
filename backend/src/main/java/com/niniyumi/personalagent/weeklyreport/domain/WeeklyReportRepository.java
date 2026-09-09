@@ -15,4 +15,6 @@ public interface WeeklyReportRepository {
 
     List<WeeklyReport> findByUserIdAndWeekStartDateBetween(
             long userId, LocalDate startDate, LocalDate endDate);
+
+    List<WeeklyReport> findAllByUserId(long userId);
 }

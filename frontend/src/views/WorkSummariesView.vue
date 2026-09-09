@@ -63,9 +63,9 @@ async function save() {
       <RouterLink class="back-link" :to="{ name: 'home' }"><ElIcon><ArrowLeft /></ElIcon> 返回工作台</RouterLink>
       <header class="summary-header">
         <div>
-          <p>WORK REVIEW AGENT</p>
-          <h1>从周报里，看见这一阶段的成长。</h1>
-          <span>选择季度或年度，Agent 会整理核心成果、日常工作并给出自我评分参考。</span>
+          <p>工作总结</p>
+          <h1>汇总一段时间的周报</h1>
+          <span>选择季度或年度，生成一份可继续修改的总结。</span>
         </div>
         <div class="summary-badge"><ElIcon><MagicStick /></ElIcon></div>
       </header>
@@ -74,20 +74,22 @@ async function save() {
         <div class="type-switch" aria-label="总结周期">
           <button
             type="button"
+            class="period-control"
             :class="{ active: periodType === 'QUARTER' }"
             data-test="summary-type-quarter"
             @click="selectType('QUARTER')"
           >季度总结</button>
           <button
             type="button"
+            class="period-control"
             :class="{ active: periodType === 'YEAR' }"
             data-test="summary-type-year"
             @click="selectType('YEAR')"
           >年度总结</button>
         </div>
-        <label>年份<input v-model.number="year" data-test="summary-year" type="number" min="2000" max="2100" /></label>
-        <label v-if="periodType === 'QUARTER'">季度
-          <select v-model.number="quarter" data-test="summary-quarter">
+        <label class="year-field">年份<input v-model.number="year" class="period-control" data-test="summary-year" type="number" min="2000" max="2100" /></label>
+        <label v-if="periodType === 'QUARTER'" class="quarter-field">季度
+          <select v-model.number="quarter" class="period-control" data-test="summary-quarter">
             <option :value="1">第一季度</option><option :value="2">第二季度</option>
             <option :value="3">第三季度</option><option :value="4">第四季度</option>
           </select>
@@ -109,20 +111,20 @@ async function save() {
 
       <section v-if="store.summary" class="summary-result">
         <div class="result-heading">
-          <div><span>GENERATED RESULT</span><h2>{{ store.summary.periodStart }} — {{ store.summary.periodEnd }}</h2></div>
+          <div><span>总结内容</span><h2>{{ store.summary.periodStart }} — {{ store.summary.periodEnd }}</h2></div>
           <strong>{{ draft.selfScore }}</strong>
         </div>
         <div class="result-grid">
           <label class="result-card core-card">
-            <span>01 / KEY RESULTS</span><strong>核心内容</strong>
+            <span>核心成果</span><strong>核心内容</strong>
             <textarea v-model="draft.coreContent" data-test="summary-core" rows="8"></textarea>
           </label>
           <label class="result-card">
-            <span>02 / ROUTINE</span><strong>日常工作</strong>
+            <span>日常事项</span><strong>日常工作</strong>
             <textarea v-model="draft.routineWork" data-test="summary-routine" rows="8"></textarea>
           </label>
           <label class="score-card">
-            <span>03 / SCORE</span><strong>自我评分</strong>
+            <span>评分</span><strong>自我评分</strong>
             <input v-model.number="draft.selfScore" data-test="summary-score" type="number" min="0" max="100" />
             <small>满分 100，可根据实际情况调整。</small>
           </label>
@@ -150,11 +152,14 @@ async function save() {
 .summary-badge { display: grid; width: 92px; height: 92px; flex: 0 0 auto; place-items: center; border-radius: 50%; color: #fff; background: #f05a18; font-size: 30px; }
 .control-panel { display: flex; align-items: end; gap: 14px; margin-top: 38px; padding: 20px; border-radius: 26px; background: #fff; }
 .type-switch { display: flex; padding: 4px; border-radius: 22px; background: #ece8e1; }
-.type-switch button { min-height: 40px; padding: 0 17px; border: 0; border-radius: 20px; color: #6f6b64; background: transparent; cursor: pointer; }
+.type-switch button { min-height: 46px; padding: 0 20px; border: 0; border-radius: 23px; color: #6f6b64; background: transparent; font-size: 14px; cursor: pointer; }
 .type-switch button.active { color: #fff; background: #17181c; }
-.control-panel label { display: grid; gap: 6px; color: #77736c; font-size: 11px; }
-.control-panel input, .control-panel select { min-height: 44px; padding: 0 13px; border: 1px solid #ded9d0; border-radius: 16px; color: #17181c; background: #f7f4ef; }
+.control-panel label { display: grid; gap: 7px; color: #77736c; font-size: 12px; font-weight: 700; }
+.control-panel input, .control-panel select { min-width: 0; min-height: 48px; padding: 0 15px; border: 1px solid #ded9d0; border-radius: 16px; color: #17181c; background: #f7f4ef; font: inherit; font-size: 14px; }
+.year-field { width: 140px; }.quarter-field { width: 164px; }
+.period-control:focus-visible { outline: 3px solid rgb(240 90 24 / 24%); outline-offset: 2px; border-color: #f05a18; }
 .control-actions { display: flex; gap: 10px; margin-left: auto; }
+.control-actions :deep(.el-button) { min-height: 48px; padding-inline: 21px; }
 .control-actions :deep(.el-button--primary), .save-row :deep(.el-button--primary) { --el-button-bg-color: #17181c; --el-button-border-color: #17181c; --el-button-hover-bg-color: #f05a18; --el-button-hover-border-color: #f05a18; }
 .error-notice, .success-notice { margin: 18px 0 0; padding: 13px 16px; border-radius: 16px; font-size: 13px; }
 .error-notice { color: #9f2d13; background: #fff0e9; }
@@ -178,5 +183,5 @@ async function save() {
 .empty-result > span { display: grid; width: 74px; height: 74px; margin: 20px auto; place-items: center; border-radius: 50%; background: #ffd84d; font-size: 24px; font-weight: 850; }
 .empty-result h2 { margin: 0; }.empty-result p { color: #817c73; }
 @media (max-width: 980px) { .control-panel { align-items: stretch; flex-wrap: wrap; } .control-actions { width: 100%; margin-left: 0; } .result-grid { grid-template-columns: 1fr 1fr; } .score-card { grid-column: span 2; } }
-@media (max-width: 650px) { .summary-page { padding: 0; } .summary-shell { min-height: 100vh; border-radius: 0; } .summary-badge { display: none; } .type-switch { width: 100%; } .type-switch button { flex: 1; } .control-actions { display: grid; } .result-grid { grid-template-columns: 1fr; } .score-card { grid-column: auto; } .save-row { align-items: stretch; flex-direction: column; } }
+@media (max-width: 650px) { .summary-page { padding: 0; } .summary-shell { min-height: 100vh; border-radius: 0; } .summary-badge { display: none; } .type-switch, .year-field, .quarter-field { width: 100%; } .type-switch button { flex: 1; } .control-actions { display: grid; } .control-actions :deep(.el-button) { width: 100%; margin: 0; } .result-grid { grid-template-columns: 1fr; } .score-card { grid-column: auto; } .save-row { align-items: stretch; flex-direction: column; } }
 </style>

@@ -46,7 +46,8 @@ public class CourseService {
         Course updated = new Course(
                 current.id(), current.userId(), current.title(), current.status(),
                 current.durationSeconds(), current.processingProgress(), current.transcript(), normalize(noteContent),
-                current.errorMessage(), current.createdAt(), clock.instant());
+                current.errorMessage(), current.sourceType(), current.originalAudioPath(), current.expectedBytes(),
+                current.createdAt(), clock.instant());
         return repository.update(updated);
     }
 
@@ -59,6 +60,7 @@ public class CourseService {
         return repository.update(new Course(
                 current.id(), current.userId(), current.title(), CourseStatus.PROCESSING,
                 current.durationSeconds(), 85, current.transcript(), null, null,
+                current.sourceType(), current.originalAudioPath(), current.expectedBytes(),
                 current.createdAt(), clock.instant()));
     }
 

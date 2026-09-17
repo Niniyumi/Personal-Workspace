@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { authenticatedRequest } from '../../shared/authenticatedRequest'
 import { useAuthStore } from '../auth/authStore'
 import { courseApi } from './courseApi'
 import type { Course, CourseAudioPart, CourseSummary } from './types'
@@ -26,23 +27,12 @@ export const useCourseStore = defineStore('course', () => {
 
   async function request<T>(operation: (token: string) => Promise<T>): Promise<T> {
     const auth = useAuthStore()
-    const token = auth.tokens?.accessToken
-    if (!token) throw new Error('登录状态已失效')
     error.value = null
     try {
-      return await operation(token)
+      return await authenticatedRequest(operation)
     } catch (cause) {
-      if (isUnauthorized(cause)) {
-        try {
-          return await operation(await auth.refreshAccessToken())
-        } catch (retryCause) {
-          logCourseError(retryCause)
-          error.value = '登录状态已失效，请重新登录'
-          throw retryCause
-        }
-      }
       logCourseError(cause)
-      error.value = '操作失败，请稍后重试'
+      error.value = auth.sessionExpired ? '登录状态已失效，请重新登录' : '操作失败，请稍后重试'
       throw cause
     }
   }
@@ -88,6 +78,34 @@ export const useCourseStore = defineStore('course', () => {
     return course
   }
 
+  async function uploadAudio(title: string, file: File, onProgress: (percent: number) => void) {
+    if (!title.trim() || !/\.(m4a|mp3|wav)$/i.test(file.name)
+        || file.size < 1 || file.size > 512 * 1024 * 1024) {
+      error.value = '请选择不超过 512 MB 的 M4A、MP3 或 WAV 文件，并填写课程名称'
+      throw new Error(error.value)
+    }
+    const auth = useAuthStore()
+    const key = `course-import:${auth.user?.id ?? 'user'}:${file.name}:${file.size}`
+    const remembered = Number(localStorage.getItem(key))
+    const created = remembered > 0 ? null
+      : await request(token => courseApi.createImport(token, title, file.size, file.name))
+    const courseId = created?.id ?? remembered
+    if (created) localStorage.setItem(key, String(courseId))
+    let offset = await request(token => courseApi.importOffset(token, courseId))
+    while (offset < file.size) {
+      const chunk = file.slice(offset, Math.min(offset + 8 * 1024 * 1024, file.size))
+      const saved = await request(token => courseApi.uploadImportChunk(token, courseId, offset, chunk))
+      if (saved <= offset || saved > file.size) throw new Error('上传进度异常，请重试')
+      offset = saved
+      onProgress(Math.round(offset / file.size * 100))
+    }
+    const course = await request(token => courseApi.completeImport(token, courseId))
+    localStorage.removeItem(key)
+    current.value = course
+    courses.value = [course, ...courses.value.filter(item => item.id !== course.id)]
+    return course
+  }
+
   async function generateNote(courseId: number) {
     const requestGeneration = generation
     const course = await request((token) => courseApi.generateNote(token, courseId))
@@ -107,6 +125,10 @@ export const useCourseStore = defineStore('course', () => {
     const url = URL.createObjectURL(blob)
     audioUrls.value = { ...audioUrls.value, [partNumber]: url }
     return url
+  }
+
+  async function loadOriginalAudio(courseId: number) {
+    return request(token => courseApi.originalPlaybackUrl(token, courseId))
   }
 
   async function retry(courseId: number) {
@@ -135,15 +157,10 @@ export const useCourseStore = defineStore('course', () => {
 
   return {
     courses, current, parts, audioUrls, loading, error, reset, loadAll, loadOne, get: loadOne,
-    create, uploadPart, complete, generateNote, loadParts, loadAudioPart, retry, saveNote, downloadNote,
+    create, uploadAudio, uploadPart, complete, generateNote, loadParts, loadAudioPart, loadOriginalAudio,
+    retry, saveNote, downloadNote,
   }
 })
-
-function isUnauthorized(cause: unknown) {
-  return typeof cause === 'object' && cause !== null
-    && 'response' in cause
-    && (cause as { response?: { status?: number } }).response?.status === 401
-}
 
 // 记录接口定位信息，不记录音频内容、访问令牌等敏感数据。
 function logCourseError(cause: unknown) {

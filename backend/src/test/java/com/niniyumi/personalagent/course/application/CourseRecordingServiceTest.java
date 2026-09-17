@@ -19,8 +19,12 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
+@ExtendWith(OutputCaptureExtension.class)
 class CourseRecordingServiceTest {
     private final MemoryCourseRepository courses = new MemoryCourseRepository();
     private final MemoryPartRepository parts = new MemoryPartRepository();
@@ -59,7 +63,7 @@ class CourseRecordingServiceTest {
     }
 
     @Test
-    void completeMovesTheCourseToProcessingWithTotalDuration() {
+    void completeMovesTheCourseToProcessingWithTotalDuration(CapturedOutput output) {
         service.uploadPart(42L, 1L, 1, 300,
                 new MockMultipartFile("file", "one.webm", "audio/webm", "one".getBytes()));
         service.uploadPart(42L, 1L, 2, 20,
@@ -69,6 +73,10 @@ class CourseRecordingServiceTest {
 
         assertThat(course.status()).isEqualTo(CourseStatus.PROCESSING);
         assertThat(course.durationSeconds()).isEqualTo(320);
+        assertThat(output)
+                .contains("开始接收课程录音分段, userId=42, courseId=1, partNumber=1, fileName=one.webm")
+                .contains("课程录音分段接收成功, userId=42, courseId=1, partNumber=2, durationSeconds=20")
+                .contains("课程录音接收完成, userId=42, courseId=1, parts=2, durationSeconds=320, fileBytes=6");
     }
 
     @Test
@@ -84,13 +92,15 @@ class CourseRecordingServiceTest {
     }
 
     @Test
-    void rejectsUnexpectedFileTypesAndPartNumbers() {
+    void rejectsUnexpectedFileTypesAndPartNumbers(CapturedOutput output) {
         assertThatThrownBy(() -> service.uploadPart(42L, 1L, 19, 10,
                 new MockMultipartFile("file", "part.webm", "audio/webm", "audio".getBytes())))
                 .isInstanceOf(InvalidCoursePartsException.class);
         assertThatThrownBy(() -> service.uploadPart(42L, 1L, 1, 10,
                 new MockMultipartFile("file", "part.txt", "text/plain", "audio".getBytes())))
                 .isInstanceOf(InvalidCoursePartsException.class);
+        assertThat(output).contains(
+                "课程录音分段接收失败, userId=42, courseId=1, partNumber=1, fileName=part.txt, fileBytes=5, exceptionType=InvalidCoursePartsException");
     }
 
     private static final class MemoryStorage implements CourseAudioStorage {

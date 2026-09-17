@@ -14,12 +14,12 @@ const password = ref('')
 const pending = computed(() => store.status === 'loading')
 const registered = computed(() => route.query.registered === '1')
 const reset = computed(() => route.query.reset === '1')
+const expired = computed(() => route.query.expired === '1')
 
 async function submit() {
   try {
     await store.login({ login: login.value.trim(), password: password.value })
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
-    await router.push(redirect)
+    await router.push({ name: 'home' })
   } catch {
     // Store 已将后端错误转换为用户可读信息，页面只负责展示。
   }
@@ -30,6 +30,7 @@ async function submit() {
   <AuthShell title="欢迎回来" description="登录后继续整理课程、周报和个人成果。">
     <p v-if="registered" class="notice" role="status">账号创建成功，现在可以登录。</p>
     <p v-if="reset" class="notice" role="status">密码已重置，请使用新密码登录。</p>
+    <p v-if="expired" class="notice" role="status">登录已过期，请重新登录。</p>
     <form class="auth-form" @submit.prevent="submit">
       <div class="field">
         <label for="login">用户名或邮箱</label>

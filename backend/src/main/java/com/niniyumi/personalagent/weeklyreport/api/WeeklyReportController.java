@@ -86,15 +86,26 @@ public class WeeklyReportController {
             @RequestPart("file") MultipartFile file,
             @RequestHeader(value = "X-Batch-Index", defaultValue = "1") int batchIndex,
             @RequestHeader(value = "X-Batch-Total", defaultValue = "1") int batchTotal) {
-        String text = extractor.extract(file);
-        log.info("Weekly report DOCX extracted, batch={}/{}, fileBytes={}, textChars={}",
-                batchIndex, batchTotal, file.getSize(), text.length());
         String fileName = file.getOriginalFilename();
-        DocxImportResponse response = DocxImportResponse.from(
-                aiService.classifyDocument(text), fileName,
-                dateResolver.resolveWeekStart(fileName, text).orElse(null));
-        log.info("Weekly report DOCX classified, batch={}/{}, weekStart={}",
-                batchIndex, batchTotal, response.weekStartDate());
-        return response;
+        log.info("开始上传周报, batch={}/{}, fileName={}, fileBytes={}",
+                batchIndex, batchTotal, fileName, file.getSize());
+        String stage = "提取文字";
+        try {
+            String text = extractor.extract(file);
+            log.info("Weekly report DOCX extracted, batch={}/{}, fileBytes={}, textChars={}",
+                    batchIndex, batchTotal, file.getSize(), text.length());
+            stage = "识别内容";
+            DocxImportResponse response = DocxImportResponse.from(
+                    aiService.classifyDocument(text), fileName,
+                    dateResolver.resolveWeekStart(fileName, text).orElse(null));
+            log.info("周报上传识别成功, batch={}/{}, fileName={}, weekStart={}",
+                    batchIndex, batchTotal, fileName, response.weekStartDate());
+            return response;
+        } catch (RuntimeException exception) {
+            log.warn("周报上传识别失败, batch={}/{}, fileName={}, fileBytes={}, stage={}, exceptionType={}",
+                    batchIndex, batchTotal, fileName, file.getSize(), stage,
+                    exception.getClass().getSimpleName());
+            throw exception;
+        }
     }
 }

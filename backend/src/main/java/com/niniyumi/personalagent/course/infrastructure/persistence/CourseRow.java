@@ -3,6 +3,8 @@ package com.niniyumi.personalagent.course.infrastructure.persistence;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.niniyumi.personalagent.course.domain.Course;
 import com.niniyumi.personalagent.course.domain.CourseStatus;
 import java.time.Instant;
@@ -16,9 +18,17 @@ public class CourseRow {
     private CourseStatus status;
     private Integer durationSeconds;
     private Integer processingProgress;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String transcript;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String noteContent;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String errorMessage;
+    private String sourceType;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String originalAudioPath;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Long expectedBytes;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -33,6 +43,9 @@ public class CourseRow {
         row.transcript = course.transcript();
         row.noteContent = course.noteContent();
         row.errorMessage = course.errorMessage();
+        row.sourceType = course.sourceType();
+        row.originalAudioPath = course.originalAudioPath();
+        row.expectedBytes = course.expectedBytes();
         row.createdAt = course.createdAt();
         row.updatedAt = course.updatedAt();
         return row;
@@ -40,7 +53,7 @@ public class CourseRow {
 
     Course toDomain() {
         return new Course(id, userId, title, status, durationSeconds, processingProgress, transcript, noteContent,
-                errorMessage, createdAt, updatedAt);
+                errorMessage, sourceType, originalAudioPath, expectedBytes, createdAt, updatedAt);
     }
 
     public Long getId() { return id; }
@@ -52,6 +65,9 @@ public class CourseRow {
     public String getTranscript() { return transcript; }
     public String getNoteContent() { return noteContent; }
     public String getErrorMessage() { return errorMessage; }
+    public String getSourceType() { return sourceType; }
+    public String getOriginalAudioPath() { return originalAudioPath; }
+    public Long getExpectedBytes() { return expectedBytes; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setId(Long id) { this.id = id; }
@@ -63,6 +79,9 @@ public class CourseRow {
     public void setTranscript(String transcript) { this.transcript = transcript; }
     public void setNoteContent(String noteContent) { this.noteContent = noteContent; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+    public void setSourceType(String sourceType) { this.sourceType = sourceType; }
+    public void setOriginalAudioPath(String originalAudioPath) { this.originalAudioPath = originalAudioPath; }
+    public void setExpectedBytes(Long expectedBytes) { this.expectedBytes = expectedBytes; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

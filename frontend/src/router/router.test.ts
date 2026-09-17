@@ -22,7 +22,7 @@ describe('authentication router guard', () => {
     expect(router.currentRoute.value.name).toBe('home')
   })
 
-  it('redirects an anonymous user to login and keeps the target path', async () => {
+  it('redirects an anonymous user to login without preserving the target path', async () => {
     const store = useAuthStore()
     vi.spyOn(store, 'restoreSession').mockImplementation(async () => {
       store.status = 'anonymous'
@@ -32,7 +32,7 @@ describe('authentication router guard', () => {
     await router.push('/')
 
     expect(router.currentRoute.value.name).toBe('login')
-    expect(router.currentRoute.value.query.redirect).toBe('/')
+    expect(router.currentRoute.value.query.redirect).toBeUndefined()
   })
 
   it('redirects an authenticated user away from guest pages', async () => {
@@ -87,7 +87,7 @@ describe('authentication router guard', () => {
     await router.push('/weekly-reports/42')
 
     expect(router.currentRoute.value.name).toBe('login')
-    expect(router.currentRoute.value.query.redirect).toBe('/weekly-reports/42')
+    expect(router.currentRoute.value.query.redirect).toBeUndefined()
   })
 
   it('protects the work summary route', async () => {
@@ -100,7 +100,7 @@ describe('authentication router guard', () => {
     await router.push('/work-summaries')
 
     expect(router.currentRoute.value.name).toBe('login')
-    expect(router.currentRoute.value.query.redirect).toBe('/work-summaries')
+    expect(router.currentRoute.value.query.redirect).toBeUndefined()
   })
 
   it('protects the course list and detail routes', async () => {
@@ -113,6 +113,6 @@ describe('authentication router guard', () => {
     await router.push('/courses/42')
 
     expect(router.currentRoute.value.name).toBe('login')
-    expect(router.currentRoute.value.query.redirect).toBe('/courses/42')
+    expect(router.currentRoute.value.query.redirect).toBeUndefined()
   })
 })

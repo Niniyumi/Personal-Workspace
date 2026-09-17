@@ -193,7 +193,7 @@ async function saveBatch() {
               <label>核心工作<textarea v-model="draft.coreWork" rows="4"></textarea></label>
               <div class="batch-fields"><label>遇到的问题<textarea v-model="draft.problems" rows="3"></textarea></label><label>下周计划<textarea v-model="draft.nextWeekPlan" rows="3"></textarea></label></div>
             </article>
-            <ElButton data-test="save-batch-reports" type="primary" round :loading="batchSaving" :disabled="batchPending" @click="saveBatch">确认导入</ElButton>
+            <ElButton class="standard-action-button" data-test="save-batch-reports" type="primary" round :loading="batchSaving" :disabled="batchPending" @click="saveBatch">确认导入</ElButton>
           </section>
         </section>
 
@@ -211,6 +211,7 @@ async function saveBatch() {
               <time>{{ report.weekStartDate }}</time>
               <strong>{{ report.coreWork }}</strong>
               <RouterLink
+                class="action-link"
                 :data-test="`report-detail-${report.id}`"
                 :to="{ name: 'weekly-report-detail', params: { id: report.id } }"
               >查看详情 →</RouterLink>
@@ -249,7 +250,7 @@ async function saveBatch() {
 .report-list article { display: grid; gap: 9px; padding: 18px; border-radius: 20px; background: #30323a; }
 .report-list time { color: #ffd84d; font-size: 11px; font-weight: 800; }
 .report-list strong { display: -webkit-box; overflow: hidden; color: #f7f7f5; font-size: 14px; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.report-list a { color: #f89a6f; font-size: 12px; font-weight: 750; text-decoration: none; }
+.report-list a { color: #f89a6f; font-size: 14px; font-weight: 750; text-decoration: none; }
 .empty-history { margin-top: 24px; padding: 28px 16px; border: 1px dashed #4b4d55; border-radius: 20px; color: #aaaab0; font-size: 13px; text-align: center; }
 .batch-panel { display: grid; gap: 14px; margin-top: 22px; padding-top: 22px; border-top: 1px solid #e1ddd5; }
 .batch-heading h2 { margin: 5px 0 0; font-size: 22px; }.batch-heading span { color: #f05a18; font-size: 11px; font-weight: 800; }

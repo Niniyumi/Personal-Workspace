@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   generateNote: vi.fn(),
   loadParts: vi.fn(),
   loadAudioPart: vi.fn(),
+  loadOriginalAudio: vi.fn(),
   store: {
     current: null as Record<string, unknown> | null,
     error: null as string | null,
@@ -21,6 +22,7 @@ const mocks = vi.hoisted(() => ({
     generateNote: vi.fn(),
     loadParts: vi.fn(),
     loadAudioPart: vi.fn(),
+    loadOriginalAudio: vi.fn(),
     parts: [{ id: 1, partNumber: 1, durationSeconds: 120, fileSize: 5 }],
   },
 }))
@@ -40,6 +42,7 @@ beforeEach(() => {
   mocks.store.generateNote = mocks.generateNote
   mocks.store.loadParts = mocks.loadParts
   mocks.store.loadAudioPart = mocks.loadAudioPart
+  mocks.store.loadOriginalAudio = mocks.loadOriginalAudio
   mocks.store.current = {
     id: 9,
     title: 'Java 并发课',
@@ -57,9 +60,38 @@ beforeEach(() => {
   mocks.generateNote.mockResolvedValue(mocks.store.current)
   mocks.loadParts.mockResolvedValue(mocks.store.parts)
   mocks.loadAudioPart.mockResolvedValue('blob:audio')
+  mocks.loadOriginalAudio.mockResolvedValue('/api/course-audio/ticket')
 })
 
 describe('CourseDetailView', () => {
+  it('uses a readable section label without a duplicate status tag', async () => {
+    mocks.store.current = { ...mocks.store.current, sourceType: 'IMPORT' }
+    mocks.loadOne.mockResolvedValue(mocks.store.current)
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="course-eyebrow"]').text()).toBe('课程记录')
+    expect(wrapper.find('.el-tag').exists()).toBe(false)
+    expect(wrapper.get('[data-test="load-original-audio"]').classes()).toContain('secondary-action')
+    expect(wrapper.get('[data-test="load-original-audio"]').classes()).not.toContain('is-text')
+  })
+
+  it('explains how to resume an unfinished recording upload', async () => {
+    mocks.store.current = { ...mocks.store.current, status: 'UPLOADING', sourceType: 'IMPORT' }
+    mocks.loadOne.mockResolvedValue(mocks.store.current)
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('回到课程列表，选择同一份录音文件继续上传')
+  })
+
+  it('keeps completed transcript sections visible after a later section fails', async () => {
+    mocks.store.current = { ...mocks.store.current, status: 'FAILED', transcript: '已完成第一段',
+      errorMessage: '第二段失败' }
+    mocks.loadOne.mockResolvedValue(mocks.store.current)
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('已完成第一段')
+  })
   it('shows the transcript and saves an edited note', async () => {
     const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
@@ -122,6 +154,19 @@ describe('CourseDetailView', () => {
 
     expect(mocks.loadAudioPart).toHaveBeenCalledWith(9, 1)
     expect(wrapper.get('audio').attributes('src')).toBe('blob:audio')
+  })
+
+  it('streams the imported original M4A through a playback URL', async () => {
+    mocks.store.current = { ...mocks.store.current, sourceType: 'IMPORT' }
+    mocks.loadOne.mockResolvedValue(mocks.store.current)
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    await wrapper.get('[data-test="load-original-audio"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.loadOriginalAudio).toHaveBeenCalledWith(9)
+    expect(wrapper.get('[data-test="original-audio"]').attributes('src')).toBe('/api/course-audio/ticket')
   })
 
   it('shows note generation failure without hiding the saved transcript', async () => {

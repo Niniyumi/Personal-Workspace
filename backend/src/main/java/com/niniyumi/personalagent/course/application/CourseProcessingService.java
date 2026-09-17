@@ -22,8 +22,12 @@ import org.springframework.stereotype.Service;
 public class CourseProcessingService {
     private static final Logger log = LoggerFactory.getLogger(CourseProcessingService.class);
     private static final String NOTE_PROMPT = """
-            你是课程笔记助手。请根据完整课堂转写生成简洁的 Markdown 笔记，固定包含：
-            课程摘要、核心知识点、重要概念、示例或案例、复习提纲。不要编造转写中不存在的内容。
+            你是忠实的课程笔记整理助手。课堂转写是唯一事实来源。
+            只总结老师在转写中明确讲过的内容，不得添加模型自己的知识、观点、推断、结论或案例。
+            不得生成课后自测、练习题、延伸阅读、学习建议或转写中没有的复习内容。
+            老师没有明确布置任务时，不得生成课后任务。无法从转写确认的内容直接省略，不得猜测。
+            使用简洁 Markdown，可按实际内容使用：课程摘要、老师讲解的知识点、课堂中明确出现的例子、老师明确布置的任务。
+            没有对应内容的栏目直接省略，不要为了凑齐栏目自行补写，并保持老师原有结论和因果关系。
             """;
     private final CourseRepository courses;
     private final CourseAudioPartRepository parts;
@@ -55,25 +59,46 @@ public class CourseProcessingService {
         List<CourseAudioPart> audioParts = parts.findAllByCourseId(courseId);
         int progress = 10;
         try {
+            long totalBytes = audioParts.stream().mapToLong(CourseAudioPart::fileSize).sum();
+            log.info("开始课程录音转写, userId={}, courseId={}, parts={}, durationSeconds={}, fileBytes={}",
+                    userId, courseId, audioParts.size(), course.durationSeconds(), totalBytes);
             courses.update(withProgress(course, progress));
             if (audioParts.isEmpty()) throw new InvalidCoursePartsException();
             List<String> transcripts = new ArrayList<>();
             for (int index = 0; index < audioParts.size(); index++) {
-                transcripts.add(speechProvider.transcribe(Path.of(audioParts.get(index).storagePath())));
+                CourseAudioPart part = audioParts.get(index);
+                String text = part.transcript();
+                if (text == null || text.isBlank()) {
+                    log.info("开始转写课程录音分段, userId={}, courseId={}, partNumber={}, durationSeconds={}, fileBytes={}, storagePath={}",
+                            userId, courseId, part.partNumber(), part.durationSeconds(),
+                            part.fileSize(), part.storagePath());
+                    text = speechProvider.transcribe(Path.of(part.storagePath()));
+                    parts.update(new CourseAudioPart(part.id(), part.courseId(), part.partNumber(),
+                            part.durationSeconds(), part.storagePath(), part.fileSize(), text, part.createdAt()));
+                    log.info("课程录音分段转写成功, userId={}, courseId={}, partNumber={}, transcriptChars={}",
+                            userId, courseId, part.partNumber(), text.length());
+                }
+                transcripts.add(text);
                 progress = 10 + Math.round(65F * (index + 1) / audioParts.size());
-                courses.update(withProgress(course, progress));
+                courses.update(withProgress(course, progress, String.join("\n\n", transcripts)));
             }
             String transcript = String.join("\n\n", transcripts);
             courses.update(new Course(
                     course.id(), course.userId(), course.title(), CourseStatus.TRANSCRIBED,
                     course.durationSeconds(), 100, transcript, null, null,
+                    course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
                     course.createdAt(), clock.instant()));
+            log.info("课程录音转写完成, userId={}, courseId={}, parts={}, durationSeconds={}, fileBytes={}, transcriptChars={}, storagePath={}",
+                    userId, courseId, audioParts.size(), course.durationSeconds(), totalBytes,
+                    transcript.length(), course.originalAudioPath());
 
         } catch (RuntimeException exception) {
-            log.error("Course processing failed, userId={}, courseId={}", userId, courseId, exception);
+            log.error("课程录音转写失败, userId={}, courseId={}, completedParts={}, storagePath={}",
+                    userId, courseId, completedParts(audioParts), course.originalAudioPath(), exception);
             courses.update(new Course(
                     course.id(), course.userId(), course.title(), CourseStatus.FAILED,
-                    course.durationSeconds(), progress, null, null, processingErrorMessage(exception),
+                    course.durationSeconds(), progress, partialTranscript(audioParts), null, processingErrorMessage(exception),
+                    course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
                     course.createdAt(), clock.instant()));
             return;
         }
@@ -93,24 +118,49 @@ public class CourseProcessingService {
             throw new InvalidCourseStateException();
         }
         try {
+            log.info("开始生成课程笔记, userId={}, courseId={}, transcriptChars={}",
+                    userId, courseId, course.transcript().length());
             String note = chatProvider.complete(NOTE_PROMPT, course.transcript());
             courses.update(new Course(
                     course.id(), course.userId(), course.title(), CourseStatus.READY,
                     course.durationSeconds(), 100, course.transcript(), note.trim(), null,
+                    course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
                     course.createdAt(), clock.instant()));
+            log.info("课程笔记生成完成, userId={}, courseId={}, transcriptChars={}, noteChars={}",
+                    userId, courseId, course.transcript().length(), note.trim().length());
         } catch (RuntimeException exception) {
-            log.error("Course note generation failed, userId={}, courseId={}", userId, courseId, exception);
+            log.error("课程笔记生成失败, userId={}, courseId={}, transcriptChars={}",
+                    userId, courseId, course.transcript().length(), exception);
             courses.update(new Course(
                     course.id(), course.userId(), course.title(), CourseStatus.TRANSCRIBED,
                     course.durationSeconds(), 100, course.transcript(), null,
-                    noteErrorMessage(exception), course.createdAt(), clock.instant()));
+                    noteErrorMessage(exception), course.sourceType(), course.originalAudioPath(),
+                    course.expectedBytes(), course.createdAt(), clock.instant()));
         }
     }
 
     private Course withProgress(Course course, int progress) {
+        return withProgress(course, progress, course.transcript());
+    }
+
+    private Course withProgress(Course course, int progress, String transcript) {
         return new Course(course.id(), course.userId(), course.title(), CourseStatus.PROCESSING,
-                course.durationSeconds(), progress, course.transcript(), course.noteContent(), null,
+                course.durationSeconds(), progress, transcript, course.noteContent(), null,
+                course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
                 course.createdAt(), clock.instant());
+    }
+
+    private String partialTranscript(List<CourseAudioPart> audioParts) {
+        if (audioParts.isEmpty()) return null;
+        String text = parts.findAllByCourseId(audioParts.get(0).courseId()).stream()
+                .map(CourseAudioPart::transcript).filter(value -> value != null && !value.isBlank())
+                .collect(java.util.stream.Collectors.joining("\n\n"));
+        return text.isBlank() ? null : text;
+    }
+
+    private long completedParts(List<CourseAudioPart> audioParts) {
+        return parts.findAllByCourseId(audioParts.isEmpty() ? -1 : audioParts.get(0).courseId()).stream()
+                .filter(part -> part.transcript() != null && !part.transcript().isBlank()).count();
     }
 
     private String processingErrorMessage(RuntimeException exception) {

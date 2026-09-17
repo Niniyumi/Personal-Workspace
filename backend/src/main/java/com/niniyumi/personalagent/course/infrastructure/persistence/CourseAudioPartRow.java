@@ -15,6 +15,7 @@ public class CourseAudioPartRow {
     private Integer durationSeconds;
     private String storagePath;
     private Long fileSize;
+    private String transcript;
     private Instant createdAt;
 
     static CourseAudioPartRow fromDomain(CourseAudioPart part) {
@@ -25,12 +26,13 @@ public class CourseAudioPartRow {
         row.durationSeconds = part.durationSeconds();
         row.storagePath = part.storagePath();
         row.fileSize = part.fileSize();
+        row.transcript = part.transcript();
         row.createdAt = part.createdAt();
         return row;
     }
 
     CourseAudioPart toDomain() {
-        return new CourseAudioPart(id, courseId, partNumber, durationSeconds, storagePath, fileSize, createdAt);
+        return new CourseAudioPart(id, courseId, partNumber, durationSeconds, storagePath, fileSize, transcript, createdAt);
     }
 
     public Long getId() { return id; }
@@ -39,6 +41,7 @@ public class CourseAudioPartRow {
     public Integer getDurationSeconds() { return durationSeconds; }
     public String getStoragePath() { return storagePath; }
     public Long getFileSize() { return fileSize; }
+    public String getTranscript() { return transcript; }
     public Instant getCreatedAt() { return createdAt; }
     public void setId(Long id) { this.id = id; }
     public void setCourseId(Long courseId) { this.courseId = courseId; }
@@ -46,5 +49,6 @@ public class CourseAudioPartRow {
     public void setDurationSeconds(Integer durationSeconds) { this.durationSeconds = durationSeconds; }
     public void setStoragePath(String storagePath) { this.storagePath = storagePath; }
     public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
+    public void setTranscript(String transcript) { this.transcript = transcript; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

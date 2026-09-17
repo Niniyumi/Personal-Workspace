@@ -14,6 +14,7 @@ describe('dashboardStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    mocks.auth.tokens = { accessToken: 'access-token' }
   })
 
   it('keeps real dashboard data after loading', async () => {
@@ -29,5 +30,19 @@ describe('dashboardStore', () => {
 
     expect(store.data).toEqual(response)
     expect(store.error).toBeNull()
+  })
+
+  it('refreshes an expired token and retries loading the dashboard once', async () => {
+    mocks.get.mockRejectedValueOnce({ response: { status: 401 } }).mockResolvedValueOnce({
+      totalWeeklyReports: 0, totalCourseNotes: 0, totalRecordingSeconds: 0,
+      monthWeeklyReports: 0, monthCourseNotes: 0, monthRecordingSeconds: 0,
+      monthlyActivity: [], recentItems: [],
+    })
+    mocks.auth.refreshAccessToken.mockResolvedValue('fresh-token')
+
+    await useDashboardStore().load()
+
+    expect(mocks.auth.refreshAccessToken).toHaveBeenCalledOnce()
+    expect(mocks.get).toHaveBeenNthCalledWith(2, 'fresh-token')
   })
 })

@@ -23,6 +23,13 @@ public class MybatisCourseAudioPartRepository implements CourseAudioPartReposito
     }
 
     @Override
+    public CourseAudioPart update(CourseAudioPart part) {
+        CourseAudioPartRow row = CourseAudioPartRow.fromDomain(part);
+        mapper.updateById(row);
+        return row.toDomain();
+    }
+
+    @Override
     public Optional<CourseAudioPart> findByCourseIdAndPartNumber(long courseId, int partNumber) {
         return Optional.ofNullable(mapper.selectOne(new LambdaQueryWrapper<CourseAudioPartRow>()
                         .eq(CourseAudioPartRow::getCourseId, courseId)

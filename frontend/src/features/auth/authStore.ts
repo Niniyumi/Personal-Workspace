@@ -10,6 +10,7 @@ interface AuthState {
   user: User | null
   tokens: AuthTokens | null
   error: string | null
+  sessionExpired: boolean
 }
 
 let refreshPromise: Promise<string> | null = null
@@ -66,6 +67,7 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     tokens: null,
     error: null,
+    sessionExpired: false,
   }),
 
   actions: {
@@ -74,12 +76,21 @@ export const useAuthStore = defineStore('auth', {
       this.tokens = null
       this.user = null
       this.status = 'anonymous'
+      this.sessionExpired = false
+    },
+
+    expireSession(): void {
+      this.clearSession()
+      this.sessionExpired = true
     },
 
     async refreshAccessToken(): Promise<string> {
       if (refreshPromise !== null) return refreshPromise
       const refreshToken = this.tokens?.refreshToken
-      if (!refreshToken) throw new Error('登录状态已失效')
+      if (!refreshToken) {
+        this.expireSession()
+        throw new Error('登录状态已失效')
+      }
       refreshPromise = authApi.refresh(refreshToken)
         .then((tokens) => {
           tokenStorage.write(tokens)
@@ -87,7 +98,7 @@ export const useAuthStore = defineStore('auth', {
           return tokens.accessToken
         })
         .catch((error) => {
-          this.clearSession()
+          this.expireSession()
           throw error
         })
         .finally(() => {
@@ -106,6 +117,7 @@ export const useAuthStore = defineStore('auth', {
         this.tokens = tokens
         this.user = user
         this.status = 'authenticated'
+        this.sessionExpired = false
       } catch (error) {
         logAuthError('login', error)
         this.clearSession()
@@ -163,7 +175,7 @@ export const useAuthStore = defineStore('auth', {
         this.user = await authApi.currentUser(refreshed.accessToken)
         this.status = 'authenticated'
       } catch {
-        this.clearSession()
+        this.expireSession()
       }
     },
 

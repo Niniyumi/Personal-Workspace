@@ -11,7 +11,8 @@ vi.mock('../auth/authApi', () => ({
 }))
 
 vi.mock('./courseApi', () => ({
-  courseApi: { list: vi.fn(), uploadPart: vi.fn() },
+  courseApi: { list: vi.fn(), uploadPart: vi.fn(), createImport: vi.fn(), importOffset: vi.fn(),
+    uploadImportChunk: vi.fn(), completeImport: vi.fn() },
 }))
 
 describe('courseStore', () => {
@@ -35,6 +36,40 @@ describe('courseStore', () => {
 
     expect(authApi.refresh).toHaveBeenCalledWith('refresh-token')
     expect(courseApi.uploadPart).toHaveBeenNthCalledWith(2, 'fresh', 9, 1, 300, expect.any(Blob))
+  })
+
+  it.each([
+    ['lecture.m4a', 'audio/mp4'],
+    ['lecture.mp3', 'audio/mpeg'],
+    ['lecture.wav', 'audio/wav'],
+  ])('uploads supported recording %s in chunks', async (fileName, contentType) => {
+    useAuthStore().tokens = { accessToken: 'access', refreshToken: 'refresh', expiresInSeconds: 900 }
+    const imported = { id: 9, title: '网络课', status: 'UPLOADING' as const,
+      durationSeconds: 0, processingProgress: 0, transcript: null, noteContent: null,
+      errorMessage: null, sourceType: 'IMPORT' as const, createdAt: '', updatedAt: '' }
+    vi.mocked(courseApi.createImport).mockResolvedValue(imported)
+    vi.mocked(courseApi.importOffset).mockResolvedValue(0)
+    vi.mocked(courseApi.uploadImportChunk).mockImplementation(async (_token, _id, offset, blob) => offset + blob.size)
+    vi.mocked(courseApi.completeImport).mockResolvedValue({ ...imported, status: 'PROCESSING' })
+    const file = new File([new Uint8Array(8 * 1024 * 1024 + 3)], fileName, { type: contentType })
+    const progress: number[] = []
+
+    const result = await useCourseStore().uploadAudio('网络课', file, value => progress.push(value))
+
+    expect(result.status).toBe('PROCESSING')
+    expect(courseApi.createImport).toHaveBeenCalledWith('access', '网络课', file.size, fileName)
+    expect(vi.mocked(courseApi.uploadImportChunk).mock.calls.map(call => call[2])).toEqual([0, 8 * 1024 * 1024])
+    expect(progress.at(-1)).toBe(100)
+    expect(courseApi.completeImport).toHaveBeenCalledOnce()
+  })
+
+  it('rejects unsupported recording formats before creating an import', async () => {
+    useAuthStore().tokens = { accessToken: 'access', refreshToken: 'refresh', expiresInSeconds: 900 }
+    const file = new File(['audio'], 'lecture.aac', { type: 'audio/aac' })
+
+    await expect(useCourseStore().uploadAudio('网络课', file, () => undefined))
+      .rejects.toThrow('M4A、MP3 或 WAV')
+    expect(courseApi.createImport).not.toHaveBeenCalled()
   })
 
   it('ignores a previous accounts delayed course response after reset', async () => {

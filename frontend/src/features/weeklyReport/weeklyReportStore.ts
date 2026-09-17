@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { logApiError } from '../../shared/logApiError'
+import { authenticatedRequest } from '../../shared/authenticatedRequest'
 import { useAuthStore } from '../auth/authStore'
 import { weeklyReportApi } from './weeklyReportApi'
 import type { BatchProgress } from './weeklyReportApi'
@@ -16,17 +17,15 @@ export const useWeeklyReportStore = defineStore('weeklyReport', () => {
   async function request<T>(operation: (accessToken: string) => Promise<T>): Promise<T | null> {
     loading.value = true
     error.value = null
-    const accessToken = useAuthStore().tokens?.accessToken
-    if (accessToken === undefined) {
-      error.value = '登录状态已失效，请重新登录'
-      loading.value = false
-      return null
-    }
     try {
-      return await operation(accessToken)
+      return await authenticatedRequest(operation)
     } catch (cause) {
       logApiError('weekly-report', cause)
-      error.value = '操作失败，请稍后重试'
+      const sessionExpired = useAuthStore().sessionExpired
+      error.value = sessionExpired
+        ? '登录状态已失效，请重新登录'
+        : '操作失败，请稍后重试'
+      if (sessionExpired) return null
       throw cause
     } finally {
       loading.value = false

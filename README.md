@@ -15,7 +15,7 @@ and course recording-to-notes are implemented.
 - Year/month report history and detail view
 - DOCX extraction with configurable AI classification
 - Quarterly/yearly summaries with editable 0–100 score
-- Browser course recording, chunk upload, asynchronous transcription, and editable notes
+- Browser course recording or M4A/MP3/WAV import (up to 150 minutes), asynchronous transcription, and editable notes
 - One configurable OpenAI-compatible chat provider
 
 ## Architecture
@@ -33,7 +33,8 @@ remain later phases.
 
 Set `DASHSCOPE_API_KEY` before testing real transcription. The default providers use Alibaba
 Cloud Model Studio with `qwen3-asr-flash` for speech and `qwen-plus` for Markdown notes.
-Temporary audio is stored under `COURSE_STORAGE_DIR` and deleted after successful generation.
+Audio is stored under `COURSE_STORAGE_DIR` and retained with its transcript and note. Imported recordings
+also require `FFMPEG_PATH` and `FFPROBE_PATH`; they are split locally before using the existing speech model.
 
 ## Documentation
 

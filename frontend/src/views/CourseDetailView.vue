@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ArrowLeft, Download, Refresh } from '@element-plus/icons-vue'
-import { ElButton, ElIcon, ElInput, ElProgress, ElTag } from 'element-plus'
+import { ElButton, ElIcon, ElInput, ElProgress } from 'element-plus'
 import { useRoute } from 'vue-router'
 import { useCourseStore } from '../features/course/courseStore'
 
@@ -15,6 +15,7 @@ const notice = ref('')
 const downloadPending = ref(false)
 const notePending = ref(false)
 const audioSources = ref<Record<number, string>>({})
+const originalAudioSource = ref('')
 let pollTimer: number | null = null
 
 watch(() => course.value?.noteContent, (content) => {
@@ -76,6 +77,10 @@ async function loadAudio(partNumber: number) {
   if (source) audioSources.value = { ...audioSources.value, [partNumber]: source }
 }
 
+async function loadOriginalAudio() {
+  originalAudioSource.value = await store.loadOriginalAudio(courseId).catch(() => '')
+}
+
 async function downloadNote() {
   if (!course.value || downloadPending.value) return
   downloadPending.value = true
@@ -89,18 +94,20 @@ async function downloadNote() {
   <div class="detail-page">
     <main class="detail-shell">
       <RouterLink class="back-link" :to="{ name: 'courses' }"><ElIcon><ArrowLeft /></ElIcon> 返回课程记录</RouterLink>
-      <p class="eyebrow">课程记录</p>
+      <p class="eyebrow" data-test="course-eyebrow">课程记录</p>
       <div v-if="course" class="detail-heading">
         <div><h1>{{ course.title }}</h1><span>{{ Math.ceil(course.durationSeconds / 60) }} 分钟</span></div>
-        <ElTag round :type="course.status === 'FAILED' ? 'danger' : course.status === 'READY' ? 'success' : 'warning'">
-          {{ course.status === 'READY' ? '已完成' : course.status === 'TRANSCRIBED' ? '文字已提取' : course.status === 'FAILED' ? '转写失败' : '处理中' }}
-        </ElTag>
       </div>
 
       <p v-if="store.error" class="error-notice" role="alert">{{ store.error }}</p>
       <p v-if="notice" class="success-notice" role="status">{{ notice }}</p>
 
-      <section v-if="course?.status === 'PROCESSING'" class="processing-card" aria-busy="true">
+      <section v-if="course?.status === 'UPLOADING'" class="processing-card">
+        <h2>录音还没上传完</h2>
+        <p>回到课程列表，选择同一份录音文件继续上传。</p>
+      </section>
+
+      <section v-else-if="course?.status === 'PROCESSING'" class="processing-card" aria-busy="true">
         <span class="spinner"></span><h2>{{ course.transcript ? '正在生成笔记' : '正在提取录音文字' }}</h2>
         <ElProgress
           data-test="course-progress"
@@ -113,9 +120,10 @@ async function downloadNote() {
       </section>
 
       <section v-else-if="course?.status === 'FAILED'" class="failed-card">
-        <h2>录音文字提取失败</h2>
+        <h2>录音处理失败</h2>
         <p>{{ course.errorMessage }}</p>
-        <ElButton data-test="retry-course" round type="primary" @click="retry"><ElIcon><Refresh /></ElIcon>重新处理</ElButton>
+        <pre v-if="course.transcript">{{ course.transcript }}</pre>
+        <ElButton class="standard-action-button" data-test="retry-course" round type="primary" @click="retry"><ElIcon><Refresh /></ElIcon>重新处理</ElButton>
       </section>
 
       <div v-else-if="course" class="content-grid">
@@ -124,10 +132,15 @@ async function downloadNote() {
           <pre>{{ course.transcript || '暂无转写内容' }}</pre>
           <div class="audio-list">
             <h3>原始录音</h3>
+            <div v-if="course.sourceType === 'IMPORT'" class="audio-part original-audio">
+              <span>上传的录音</span>
+              <audio v-if="originalAudioSource" data-test="original-audio" controls :src="originalAudioSource"></audio>
+              <ElButton v-else class="secondary-action" data-test="load-original-audio" round @click="loadOriginalAudio">加载原始录音</ElButton>
+            </div>
             <div v-for="part in store.parts" :key="part.id" class="audio-part">
               <span>第 {{ part.partNumber }} 段 · {{ Math.ceil(part.durationSeconds / 60) }} 分钟</span>
               <audio v-if="audioSources[part.partNumber]" controls :src="audioSources[part.partNumber]"></audio>
-              <ElButton v-else :data-test="`load-course-audio-${part.partNumber}`" text @click="loadAudio(part.partNumber)">加载录音</ElButton>
+              <ElButton v-else class="secondary-action" :data-test="`load-course-audio-${part.partNumber}`" round @click="loadAudio(part.partNumber)">加载录音</ElButton>
             </div>
           </div>
         </section>
@@ -160,7 +173,8 @@ async function downloadNote() {
 .detail-page { min-height: 100vh; padding: clamp(18px, 3vw, 42px); color: #17181c; background: #d8d5cf; }
 .detail-shell { width: min(1320px, 100%); min-height: calc(100vh - 84px); margin: 0 auto; padding: clamp(24px, 4vw, 54px); border-radius: 34px; background: #f6f3ed; box-shadow: 0 30px 70px rgb(35 32 27 / 14%); }
 .back-link { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 28px; color: #57534d; font-size: 13px; font-weight: 750; text-decoration: none; }
-.eyebrow, .content-card > span { margin: 0 0 8px; color: #f05a18; font-size: 10px; font-weight: 850; letter-spacing: .14em; }
+.eyebrow { margin: 0 0 10px; color: #f05a18; font-size: 16px; font-weight: 850; letter-spacing: .04em; }
+.content-card > span { margin: 0 0 8px; color: #f05a18; font-size: 10px; font-weight: 850; letter-spacing: .14em; }
 .detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; }
 .detail-heading h1 { margin: 0; font-size: clamp(34px, 5vw, 64px); letter-spacing: -.055em; }
 .detail-heading span { display: block; margin-top: 10px; color: #77736c; }
@@ -172,6 +186,7 @@ async function downloadNote() {
 .audio-list h3 { margin: 0 0 12px; font-size: 15px; }
 .audio-part { display: grid; min-height: 48px; align-items: center; grid-template-columns: minmax(110px, 1fr) minmax(120px, 2fr); gap: 12px; color: #77736c; font-size: 12px; }
 .audio-part audio { width: 100%; height: 38px; }
+.audio-part :deep(.el-button) { justify-self: start; }
 .note-card { background: #24262d; color: #fff; }
 .generate-box { padding: 28px 0; color: #c3c4c8; line-height: 1.7; }
 .generate-box .note-error { padding: 11px 13px; border-radius: 12px; color: #ffd2c1; background: #4b2a25; }
@@ -180,6 +195,7 @@ async function downloadNote() {
 .note-card :deep(.el-button) { min-height: 44px; margin: 0; }
 .note-card :deep(.el-button--primary), .failed-card :deep(.el-button--primary) { --el-button-bg-color: #17181c; --el-button-border-color: #17181c; --el-button-hover-bg-color: #f05a18; --el-button-hover-border-color: #f05a18; }
 .processing-card, .failed-card { margin-top: 38px; text-align: center; }
+.failed-card pre { max-height: 240px; overflow: auto; padding: 16px; border-radius: 14px; background: #f6f3ed; text-align: left; white-space: pre-wrap; }
 .processing-card h2, .failed-card h2 { margin: 14px 0 8px; }
 .processing-card p, .failed-card p { color: #77736c; }
 .processing-card :deep(.el-progress) { width: min(520px, 100%); margin: 20px auto 0; }

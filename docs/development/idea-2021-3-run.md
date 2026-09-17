@@ -40,7 +40,7 @@ CREATE DATABASE IF NOT EXISTS work
   COLLATE utf8mb4_unicode_ci;
 ```
 
-只在确认 `work` 库没有需要保护的同名旧表后启动。应用启动时 Flyway 会自动执行 V1–V6。
+只在确认 `work` 库没有需要保护的同名旧表后启动。应用启动时 Flyway 会自动执行 V1–V7。
 
 ### 4. 在 IDEA Terminal 启动后端
 
@@ -53,6 +53,9 @@ $env:DB_PASSWORD = Read-Host 'MySQL 密码'
 $env:JWT_SECRET = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
 $env:MAIL_USERNAME = Read-Host 'QQ 发件邮箱；暂不测邮件可直接回车'
 $env:MAIL_AUTH_CODE = Read-Host 'QQ 邮箱 SMTP 授权码；暂不测邮件可直接回车'
+$env:DASHSCOPE_API_KEY = Read-Host '阿里云百炼 API Key；暂不处理录音可直接回车'
+$env:FFMPEG_PATH = 'D:\pp-program\Personal-Workspace\.tools\ffmpeg\bin\ffmpeg.exe'
+$env:FFPROBE_PATH = 'D:\pp-program\Personal-Workspace\.tools\ffmpeg\bin\ffprobe.exe'
 .\mvnw.cmd spring-boot:run
 ```
 
@@ -127,7 +130,7 @@ D:\pp-program\Personal-Workspace\backend\target\personal-agent.war
 7. HTTP Port 使用 `8080`。
 8. 在 `Deployment` 页添加 `personal-agent:war exploded`；如果旧 IDEA 无法生成 Artifact，直接把已构建的 `personal-agent.war` 放进 Tomcat 的 `webapps` 目录，再运行 Tomcat。
 9. Application context 设置为 `/`。
-10. 在运行配置的 `Environment variables` 中设置 `DB_USERNAME`、`DB_PASSWORD`、`JWT_SECRET`、`MAIL_USERNAME`、`MAIL_AUTH_CODE`。
+10. 在运行配置的 `Environment variables` 中设置 `DB_USERNAME`、`DB_PASSWORD`、`JWT_SECRET`、`MAIL_USERNAME`、`MAIL_AUTH_CODE`、`DASHSCOPE_API_KEY`、`FFMPEG_PATH` 和 `FFPROBE_PATH`。后两个路径使用 `D:\pp-program\Personal-Workspace\.tools\ffmpeg\bin\ffmpeg.exe` 和同目录的 `ffprobe.exe`。
 
 ### 3. 启动
 

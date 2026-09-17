@@ -24,6 +24,24 @@ const course: Course = {
 afterEach(() => mock.reset())
 
 describe('courseApi', () => {
+  it('creates an audio import with its original filename and sends a binary chunk', async () => {
+    mock.onPost('/courses/imports', { title: '网络课', fileSize: 6, fileName: 'lecture.mp3' })
+      .reply(201, { ...course, status: 'UPLOADING' })
+    mock.onGet('/courses/imports/9').reply(200, { offset: 3 })
+    mock.onPut('/courses/imports/9/chunk?offset=3').reply((config) => {
+      expect(config.headers?.Authorization).toBe('Bearer access-token')
+      expect(config.headers?.['Content-Type']).toBe('application/octet-stream')
+      expect(config.data).toBeInstanceOf(Blob)
+      return [200, { offset: 6 }]
+    })
+    mock.onPost('/courses/imports/9/complete').reply(202, { ...course, status: 'PROCESSING' })
+
+    await expect(api.createImport('access-token', '网络课', 6, 'lecture.mp3'))
+      .resolves.toMatchObject({ status: 'UPLOADING' })
+    await expect(api.importOffset('access-token', 9)).resolves.toBe(3)
+    await expect(api.uploadImportChunk('access-token', 9, 3, new Blob(['def']))).resolves.toBe(6)
+    await expect(api.completeImport('access-token', 9)).resolves.toMatchObject({ status: 'PROCESSING' })
+  })
   it('creates, lists and loads a course with bearer authentication', async () => {
     mock.onPost('/courses', { title: 'Java 并发课' }).reply((config) => {
       expect(config.headers?.Authorization).toBe('Bearer access-token')
@@ -78,6 +96,13 @@ describe('courseApi', () => {
 
     await expect(api.listParts('access-token', 9)).resolves.toEqual(parts)
     await expect(api.readAudioPart('access-token', 9, 1)).resolves.toBeInstanceOf(Blob)
+  })
+
+  it('gets a short-lived original recording playback URL', async () => {
+    mock.onPost('/courses/9/original/playback').reply(200, { url: '/api/course-audio/ticket' })
+
+    await expect(api.originalPlaybackUrl('access-token', 9))
+      .resolves.toBe('/api/course-audio/ticket')
   })
 
   it('downloads the generated note as a docx blob', async () => {

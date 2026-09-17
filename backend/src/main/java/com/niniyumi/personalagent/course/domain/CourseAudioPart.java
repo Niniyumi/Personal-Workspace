@@ -9,5 +9,10 @@ public record CourseAudioPart(
         int durationSeconds,
         String storagePath,
         long fileSize,
+        String transcript,
         Instant createdAt) {
+    public CourseAudioPart(Long id, long courseId, int partNumber, int durationSeconds,
+            String storagePath, long fileSize, Instant createdAt) {
+        this(id, courseId, partNumber, durationSeconds, storagePath, fileSize, null, createdAt);
+    }
 }

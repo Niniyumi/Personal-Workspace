@@ -12,9 +12,12 @@ import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class CourseRecordingService {
+    private static final Logger log = LoggerFactory.getLogger(CourseRecordingService.class);
     public static final int MAX_DURATION_SECONDS = 5400;
     public static final int MAX_PARTS = 18;
     public static final long MAX_TOTAL_BYTES = 180L * 1024 * 1024;
@@ -41,6 +44,20 @@ public class CourseRecordingService {
 
     public CourseAudioPart uploadPart(
             long userId, long courseId, int partNumber, int durationSeconds, MultipartFile file) {
+        log.info("开始接收课程录音分段, userId={}, courseId={}, partNumber={}, fileName={}, durationSeconds={}, fileBytes={}",
+                userId, courseId, partNumber, file.getOriginalFilename(), durationSeconds, file.getSize());
+        try {
+            return uploadPartChecked(userId, courseId, partNumber, durationSeconds, file);
+        } catch (RuntimeException exception) {
+            log.warn("课程录音分段接收失败, userId={}, courseId={}, partNumber={}, fileName={}, fileBytes={}, exceptionType={}",
+                    userId, courseId, partNumber, file.getOriginalFilename(), file.getSize(),
+                    exception.getClass().getSimpleName());
+            throw exception;
+        }
+    }
+
+    private CourseAudioPart uploadPartChecked(
+            long userId, long courseId, int partNumber, int durationSeconds, MultipartFile file) {
         Course course = courseService.get(userId, courseId);
         if (course.status() != CourseStatus.RECORDING) {
             throw new InvalidCourseStateException();
@@ -62,11 +79,24 @@ public class CourseRecordingService {
             throw new InvalidCoursePartsException();
         }
         Path path = storage.store(userId, courseId, partNumber, file);
-        return parts.save(new CourseAudioPart(
+        CourseAudioPart saved = parts.save(new CourseAudioPart(
                 null, courseId, partNumber, durationSeconds, path.toString(), file.getSize(), clock.instant()));
+        log.info("课程录音分段接收成功, userId={}, courseId={}, partNumber={}, durationSeconds={}, fileBytes={}, storagePath={}",
+                userId, courseId, partNumber, durationSeconds, file.getSize(), path);
+        return saved;
     }
 
     public Course complete(long userId, long courseId) {
+        try {
+            return completeChecked(userId, courseId);
+        } catch (RuntimeException exception) {
+            log.warn("课程录音接收确认失败, userId={}, courseId={}, exceptionType={}",
+                    userId, courseId, exception.getClass().getSimpleName());
+            throw exception;
+        }
+    }
+
+    private Course completeChecked(long userId, long courseId) {
         Course course = courseService.get(userId, courseId);
         if (course.status() != CourseStatus.RECORDING) {
             throw new InvalidCourseStateException();
@@ -83,9 +113,16 @@ public class CourseRecordingService {
         if (uploaded.isEmpty() || total > MAX_DURATION_SECONDS) {
             throw new InvalidCoursePartsException();
         }
-        return courses.update(new Course(
+        long totalBytes = uploaded.stream().mapToLong(CourseAudioPart::fileSize).sum();
+        String storagePaths = uploaded.stream().map(CourseAudioPart::storagePath)
+                .collect(java.util.stream.Collectors.joining(","));
+        Course completed = courses.update(new Course(
                 course.id(), course.userId(), course.title(), CourseStatus.PROCESSING, total,
-                10, null, null, null, course.createdAt(), clock.instant()));
+                10, null, null, null, course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
+                course.createdAt(), clock.instant()));
+        log.info("课程录音接收完成, userId={}, courseId={}, parts={}, durationSeconds={}, fileBytes={}, storagePaths={}",
+                userId, courseId, uploaded.size(), total, totalBytes, storagePaths);
+        return completed;
     }
 
     public Course retry(long userId, long courseId) {
@@ -95,6 +132,8 @@ public class CourseRecordingService {
         }
         return courses.update(new Course(
                 course.id(), course.userId(), course.title(), CourseStatus.PROCESSING,
-                course.durationSeconds(), 10, null, null, null, course.createdAt(), clock.instant()));
+                course.durationSeconds(), 10, course.transcript(), null, null,
+                course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
+                course.createdAt(), clock.instant()));
     }
 }

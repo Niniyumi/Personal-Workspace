@@ -13,12 +13,14 @@ public record CourseResponse(
         String transcript,
         String noteContent,
         String errorMessage,
+        String sourceType,
         Instant createdAt,
         Instant updatedAt) {
     public static CourseResponse from(Course course) {
         return new CourseResponse(
                 course.id(), course.title(), course.status(), course.durationSeconds(),
                 course.processingProgress(), course.transcript(), course.noteContent(), course.errorMessage(),
+                course.sourceType(),
                 course.createdAt(), course.updatedAt());
     }
 }

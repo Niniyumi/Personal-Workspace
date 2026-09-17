@@ -70,7 +70,9 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       await store.restoreSession()
     }
     if (to.meta.requiresAuth && store.status !== 'authenticated') {
-      return { name: 'login', query: { redirect: to.fullPath } }
+      return store.sessionExpired
+        ? { name: 'login', query: { expired: '1' } }
+        : { name: 'login' }
     }
     if (to.meta.guestOnly && store.status === 'authenticated') {
       return { name: 'home' }

@@ -1,7 +1,9 @@
 package com.niniyumi.personalagent.course.api;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -21,18 +23,26 @@ import com.niniyumi.personalagent.course.application.CourseProcessingService;
 import com.niniyumi.personalagent.course.application.CourseAudioService;
 import com.niniyumi.personalagent.course.application.CourseRecordingService;
 import com.niniyumi.personalagent.course.application.CourseService;
+import com.niniyumi.personalagent.course.application.CourseImportService;
+import com.niniyumi.personalagent.course.application.CourseImportProcessor;
+import com.niniyumi.personalagent.course.application.CoursePlaybackService;
 import com.niniyumi.personalagent.course.domain.Course;
 import com.niniyumi.personalagent.course.domain.CourseAudioPart;
 import com.niniyumi.personalagent.course.domain.CourseStatus;
 import com.niniyumi.personalagent.course.infrastructure.document.CourseDocxExporter;
 import java.time.Instant;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
@@ -43,6 +53,9 @@ import org.springframework.test.web.servlet.MockMvc;
 class CourseControllerTest {
     @Autowired
     private MockMvc mockMvc;
+
+    @TempDir
+    Path audioDirectory;
 
     @MockBean
     private CourseService courseService;
@@ -58,6 +71,71 @@ class CourseControllerTest {
 
     @MockBean
     private CourseAudioService courseAudioService;
+
+    @MockBean
+    private CourseImportService importService;
+
+    @MockBean
+    private CourseImportProcessor importProcessor;
+
+    @MockBean
+    private CoursePlaybackService playbackService;
+
+    @Test
+    void createsAndCompletesAuthenticatedAudioImport() throws Exception {
+        Course uploading = new Course(9L, 42L, "网络课", CourseStatus.UPLOADING, 0, 0,
+                null, null, null, "IMPORT", null, 6L,
+                Instant.parse("2026-08-24T12:00:00Z"), Instant.parse("2026-08-24T12:00:00Z"));
+        Course processing = new Course(9L, 42L, "网络课", CourseStatus.PROCESSING, 0, 0,
+                null, null, null, "IMPORT", "audio/original.m4a", 6L,
+                Instant.parse("2026-08-24T12:00:00Z"), Instant.parse("2026-08-24T12:00:00Z"));
+        when(importService.create(42L, "网络课", 6L, "lecture.mp3")).thenReturn(uploading);
+        when(importService.append(anyLong(), anyLong(), anyLong(), any())).thenReturn(6L);
+        when(importService.finish(42L, 9L)).thenReturn(processing);
+
+        mockMvc.perform(post("/api/courses/imports")
+                        .with(authentication(principalAuthentication()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"网络课\",\"fileSize\":6,\"fileName\":\"lecture.mp3\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("UPLOADING"));
+        mockMvc.perform(put("/api/courses/imports/9/chunk?offset=0")
+                        .with(authentication(principalAuthentication()))
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .content("abcdef"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.offset").value(6));
+        mockMvc.perform(post("/api/courses/imports/9/complete")
+                        .with(authentication(principalAuthentication())))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("PROCESSING"));
+        verify(importProcessor).processAsync(42L, 9L);
+    }
+
+    @Test
+    void rejectsAnImportedCourseTitleLongerThanTheDatabaseLimit() throws Exception {
+        mockMvc.perform(post("/api/courses/imports")
+                        .with(authentication(principalAuthentication()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"" + "课".repeat(161)
+                                + "\",\"fileSize\":6,\"fileName\":\"lecture.mp3\"}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(importService);
+    }
+
+    @Test
+    void streamsOnlyTheRequestedBytesOfTheOriginalRecording() throws Exception {
+        Path audio = Files.writeString(audioDirectory.resolve("original.mp3"), "abcdef");
+        when(importService.original(42L, 9L)).thenReturn(new FileSystemResource(audio));
+
+        mockMvc.perform(get("/api/courses/9/original")
+                        .with(authentication(principalAuthentication()))
+                        .header(HttpHeaders.RANGE, "bytes=2-4"))
+                .andExpect(status().isPartialContent())
+                .andExpect(header().string(HttpHeaders.CONTENT_RANGE, "bytes 2-4/6"))
+                .andExpect(content().contentType("audio/mpeg"))
+                .andExpect(content().string("cde"));
+    }
 
     @Test
     void requiresAuthenticationForCourseApis() throws Exception {
@@ -126,12 +204,26 @@ class CourseControllerTest {
 
     @Test
     void retriesAFailedCourse() throws Exception {
+        when(courseService.get(42L, 9L)).thenReturn(course(CourseStatus.FAILED));
         when(recordingService.retry(42L, 9L)).thenReturn(course(CourseStatus.PROCESSING));
 
         mockMvc.perform(post("/api/courses/9/retry").with(authentication(principalAuthentication())))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("PROCESSING"));
         verify(processingService).processAsync(42L, 9L);
+    }
+
+    @Test
+    void retriesAnImportedCourseThroughTheImportProcessor() throws Exception {
+        Course imported = new Course(9L, 42L, "网络课", CourseStatus.FAILED, 300, 43,
+                "第一段", null, "转写失败", "IMPORT", "audio/original.m4a", 100L,
+                Instant.parse("2026-08-24T12:00:00Z"), Instant.parse("2026-08-24T12:00:00Z"));
+        when(courseService.get(42L, 9L)).thenReturn(imported);
+        when(importService.retry(42L, 9L)).thenReturn(imported);
+
+        mockMvc.perform(post("/api/courses/9/retry").with(authentication(principalAuthentication())))
+                .andExpect(status().isAccepted());
+        verify(importProcessor).processAsync(42L, 9L);
     }
 
     @Test

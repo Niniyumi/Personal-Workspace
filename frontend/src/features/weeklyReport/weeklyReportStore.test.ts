@@ -71,13 +71,28 @@ describe('weeklyReportStore', () => {
   })
 
   it('does not call the api when the login token is missing', async () => {
-    useAuthStore().tokens = null
+    const auth = useAuthStore()
+    auth.tokens = null
     const store = useWeeklyReportStore()
 
     await store.loadMonth(2026, 8)
 
     expect(weeklyReportApi.list).not.toHaveBeenCalled()
     expect(store.error).toBe('登录状态已失效，请重新登录')
+    expect(auth.sessionExpired).toBe(true)
+  })
+
+  it('refreshes an expired token and retries the weekly report request once', async () => {
+    const auth = useAuthStore()
+    vi.spyOn(auth, 'refreshAccessToken').mockResolvedValue('fresh-token')
+    vi.mocked(weeklyReportApi.list)
+      .mockRejectedValueOnce({ response: { status: 401 } })
+      .mockResolvedValueOnce([report])
+
+    await useWeeklyReportStore().loadMonth(2026, 8)
+
+    expect(auth.refreshAccessToken).toHaveBeenCalledOnce()
+    expect(weeklyReportApi.list).toHaveBeenNthCalledWith(2, 'fresh-token', 2026, 8)
   })
 
   it('records request failure and always ends the loading state', async () => {

@@ -83,6 +83,7 @@ describe('WeeklyReportsView', () => {
       name: 'weekly-report-detail',
       params: { id: 7 },
     })
+    expect(detailLink?.classes()).toContain('action-link')
   })
 
   it('recognizes multiple files and merges files assigned to the same week', async () => {
@@ -121,5 +122,6 @@ describe('WeeklyReportsView', () => {
       coreWork: '完成登录\n完成看板',
       sourceFileName: '周报一.docx、周报二.docx',
     }))
+    expect(wrapper.get('[data-test="save-batch-reports"]').classes()).toContain('standard-action-button')
   })
 })

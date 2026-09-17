@@ -20,7 +20,11 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+@ExtendWith(OutputCaptureExtension.class)
 class CourseProcessingServiceTest {
     private final MemoryCourseRepository courses = new MemoryCourseRepository();
     private final MemoryPartRepository parts = new MemoryPartRepository();
@@ -35,7 +39,7 @@ class CourseProcessingServiceTest {
     }
 
     @Test
-    void savesTranscriptWithoutGeneratingNotesOrDeletingAudio() {
+    void savesTranscriptWithoutGeneratingNotesOrDeletingAudio(CapturedOutput output) {
         SpeechProvider speech = path -> path.toString().endsWith("1.webm") ? "第一部分" : "第二部分";
         List<String> noteRequests = new ArrayList<>();
         ChatProvider chat = (system, user) -> {
@@ -53,10 +57,12 @@ class CourseProcessingServiceTest {
                 .containsExactly(10, 43, 75, 100);
         assertThat(noteRequests).isEmpty();
         assertThat(parts.values).hasSize(2);
+        assertThat(output).contains(
+                "课程录音转写完成, userId=42, courseId=9, parts=2, durationSeconds=600, fileBytes=20, transcriptChars=10");
     }
 
     @Test
-    void keepsAudioAndMarksTheCourseFailedWhenTranscriptionFails() {
+    void keepsAudioAndMarksTheCourseFailedWhenTranscriptionFails(CapturedOutput output) {
         CourseProcessingService service = service(path -> { throw new RuntimeException("provider down"); },
                 (system, user) -> "不会执行");
 
@@ -65,6 +71,7 @@ class CourseProcessingServiceTest {
         assertThat(courses.value.status()).isEqualTo(CourseStatus.FAILED);
         assertThat(courses.value.errorMessage()).isEqualTo("录音转写失败，请重新处理");
         assertThat(parts.values).hasSize(2);
+        assertThat(output).contains("课程录音转写失败, userId=42, courseId=9");
     }
 
     @Test
@@ -81,15 +88,46 @@ class CourseProcessingServiceTest {
 
     @Test
     void generatesANoteFromTheSavedTranscript() {
+        List<String> systemPrompts = new ArrayList<>();
         courses.value = new Course(9L, 42L, "计算机网络", CourseStatus.PROCESSING, 600,
                 85, "完整课堂转写", null, null, now, now);
-        CourseProcessingService service = service(path -> "不会执行", (system, user) -> "# 笔记");
+        CourseProcessingService service = service(path -> "不会执行", (system, user) -> {
+            systemPrompts.add(system);
+            return "# 笔记";
+        });
 
         service.generateNote(42L, 9L);
 
         assertThat(courses.value.status()).isEqualTo(CourseStatus.READY);
         assertThat(courses.value.transcript()).isEqualTo("完整课堂转写");
         assertThat(courses.value.noteContent()).isEqualTo("# 笔记");
+        assertThat(systemPrompts).singleElement().asString()
+                .contains("课堂转写是唯一事实来源")
+                .contains("不得生成课后自测、练习题、延伸阅读")
+                .contains("老师没有明确布置任务时，不得生成课后任务");
+    }
+
+    @Test
+    void resumesAfterTheFirstSuccessfulSegmentWithoutRetranscribingIt() {
+        List<String> calls = new ArrayList<>();
+        CourseProcessingService first = service(path -> {
+            calls.add(path.toString());
+            if (path.toString().endsWith("2.webm")) throw new RuntimeException("temporary failure");
+            return "已保存第一段";
+        }, (system, user) -> "not called");
+        first.process(42L, 9L);
+        assertThat(courses.value.status()).isEqualTo(CourseStatus.FAILED);
+        assertThat(parts.values.get(0).transcript()).isEqualTo("已保存第一段");
+        courses.value = new Course(9L, 42L, "计算机网络", CourseStatus.PROCESSING, 600,
+                10, courses.value.transcript(), null, null, now, now);
+
+        service(path -> {
+            calls.add(path.toString());
+            return "第二段";
+        }, (system, user) -> "not called").process(42L, 9L);
+
+        assertThat(calls).hasSize(3);
+        assertThat(courses.value.transcript()).isEqualTo("已保存第一段\n\n第二段");
     }
 
     @Test
@@ -127,6 +165,10 @@ class CourseProcessingServiceTest {
     private static final class MemoryPartRepository implements CourseAudioPartRepository {
         private final List<CourseAudioPart> values = new ArrayList<>();
         public CourseAudioPart save(CourseAudioPart part) { values.add(part); return part; }
+        public CourseAudioPart update(CourseAudioPart part) {
+            values.set(part.partNumber() - 1, part);
+            return part;
+        }
         public Optional<CourseAudioPart> findByCourseIdAndPartNumber(long courseId, int partNumber) {
             return values.stream().filter(value -> value.courseId() == courseId && value.partNumber() == partNumber).findFirst();
         }

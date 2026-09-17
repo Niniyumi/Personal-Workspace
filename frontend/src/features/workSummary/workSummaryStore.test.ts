@@ -69,4 +69,22 @@ describe('workSummaryStore', () => {
     expect(store.summary).toEqual(updated)
     expect(store.saving).toBe(false)
   })
+
+  it('refreshes an expired token and retries loading a summary once', async () => {
+    const auth = useAuthStore()
+    vi.spyOn(auth, 'refreshAccessToken').mockResolvedValue('fresh-token')
+    const loaded = {
+      id: 7, periodType: 'YEAR' as const, periodStart: '2026-01-01', periodEnd: '2026-12-31',
+      coreContent: '总结', routineWork: '日常', selfScore: 90,
+      generatedAt: '', createdAt: '', updatedAt: '',
+    }
+    vi.mocked(workSummaryApi.get)
+      .mockRejectedValueOnce({ response: { status: 401 } })
+      .mockResolvedValueOnce(loaded)
+
+    await useWorkSummaryStore().load({ periodType: 'YEAR', year: 2026 })
+
+    expect(auth.refreshAccessToken).toHaveBeenCalledOnce()
+    expect(workSummaryApi.get).toHaveBeenNthCalledWith(2, 'fresh-token', { periodType: 'YEAR', year: 2026 })
+  })
 })

@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
     error: null,
     load: vi.fn(),
   },
+  routeQuery: {} as Record<string, string>,
 }))
 
 vi.mock('../features/auth/authStore', () => ({
@@ -41,7 +42,7 @@ vi.mock('vue-router', async (importOriginal) => {
   return {
     ...actual,
     useRouter: () => ({ push: mocks.push }),
-    useRoute: () => ({ query: {} }),
+    useRoute: () => ({ query: mocks.routeQuery }),
   }
 })
 
@@ -57,6 +58,7 @@ beforeEach(() => {
   mocks.store.requestRegistrationCode = mocks.requestRegistrationCode
   mocks.store.logout = mocks.logout
   mocks.dashboard.load = mocks.loadDashboard
+  mocks.routeQuery = {}
 })
 
 describe('LoginView', () => {
@@ -73,7 +75,21 @@ describe('LoginView', () => {
     await flushPromises()
 
     expect(mocks.login).toHaveBeenCalledWith({ login: 'nini@example.com', password: 'UnitTest7!' })
-    expect(mocks.push).toHaveBeenCalledWith('/')
+    expect(mocks.push).toHaveBeenCalledWith({ name: 'home' })
+  })
+
+  it('explains an expired login and still returns to the dashboard after login', async () => {
+    mocks.routeQuery = { expired: '1', redirect: '/courses/42' }
+    mocks.login.mockResolvedValue(undefined)
+    const wrapper = mount(LoginView, { global })
+
+    expect(wrapper.get('[role="status"]').text()).toContain('登录已过期，请重新登录')
+    await wrapper.get('input[name="login"]').setValue('nini')
+    await wrapper.get('input[name="password"]').setValue('UnitTest7!')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(mocks.push).toHaveBeenCalledWith({ name: 'home' })
   })
 
   it('shows the store error and disables submit while loading', () => {

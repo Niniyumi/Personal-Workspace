@@ -1,4 +1,4 @@
-export type CourseStatus = 'RECORDING' | 'PROCESSING' | 'TRANSCRIBED' | 'READY' | 'FAILED'
+export type CourseStatus = 'UPLOADING' | 'RECORDING' | 'PROCESSING' | 'TRANSCRIBED' | 'READY' | 'FAILED'
 
 export interface Course {
   id: number
@@ -9,6 +9,7 @@ export interface Course {
   transcript: string | null
   noteContent: string | null
   errorMessage: string | null
+  sourceType?: 'IMPORT' | 'RECORDING'
   createdAt: string
   updatedAt: string
 }

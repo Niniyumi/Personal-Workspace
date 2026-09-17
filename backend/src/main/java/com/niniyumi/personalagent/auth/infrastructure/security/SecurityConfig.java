@@ -55,7 +55,7 @@ public class SecurityConfig {
                                 "/login", "/register", "/weekly-reports/**", "/work-summaries", "/courses/**").permitAll()
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout",
                                 "/api/auth/password-reset/request", "/api/auth/password-reset/confirm",
-                                "/api/auth/registration-code/request").permitAll()
+                                "/api/auth/registration-code/request", "/api/course-audio/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(errorHandler)

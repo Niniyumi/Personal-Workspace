@@ -13,6 +13,10 @@ backend/src/main/resources/application-local.yml
 
 # Node and frontend builds
 frontend/node_modules/
+/node_modules/
+.tools/
+.tmp-*/
+backend/logs/*.gz
 frontend/dist/
 frontend/.vite/
 frontend/coverage/

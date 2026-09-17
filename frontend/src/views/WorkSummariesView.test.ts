@@ -92,5 +92,6 @@ describe('WorkSummariesView', () => {
     await flushPromises()
 
     expect(mocks.update).toHaveBeenCalledWith(7, expect.objectContaining({ coreContent: '修改后的核心' }))
+    expect(wrapper.get('[data-test="save-summary"]').classes()).toContain('standard-action-button')
   })
 })

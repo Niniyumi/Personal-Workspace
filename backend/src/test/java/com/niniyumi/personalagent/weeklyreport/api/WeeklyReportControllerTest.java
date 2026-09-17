@@ -151,13 +151,14 @@ class WeeklyReportControllerTest {
                 .andExpect(jsonPath("$.weekStartDate").value("2026-08-24"))
                 .andExpect(jsonPath("$.sourceFileName").value("week-34.docx"));
         assertThat(output)
+                .contains("开始上传周报, batch=2/5, fileName=week-34.docx, fileBytes=4")
                 .contains("Weekly report DOCX extracted, batch=2/5, fileBytes=4, textChars=6")
-                .contains("Weekly report DOCX classified, batch=2/5, weekStart=2026-08-24");
+                .contains("周报上传识别成功, batch=2/5, fileName=week-34.docx, weekStart=2026-08-24");
         verifyNoInteractions(service);
     }
 
     @Test
-    void invalidDocxReturnsAStableError() throws Exception {
+    void invalidDocxReturnsAStableError(CapturedOutput output) throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "broken.docx", "application/octet-stream", "broken".getBytes());
         when(extractor.extract(any())).thenThrow(new InvalidDocxException());
@@ -167,6 +168,8 @@ class WeeklyReportControllerTest {
                         .with(authentication(principalAuthentication())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_DOCX"));
+        assertThat(output).contains(
+                "周报上传识别失败, batch=1/1, fileName=broken.docx, fileBytes=6, stage=提取文字, exceptionType=InvalidDocxException");
     }
 
     @Test

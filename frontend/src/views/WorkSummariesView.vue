@@ -131,7 +131,7 @@ async function save() {
         </div>
         <div class="save-row">
           <span>模型生成内容只是草稿，保存前请确认内容准确。</span>
-          <ElButton data-test="save-summary" type="primary" round :loading="store.saving" @click="save">保存修改</ElButton>
+          <ElButton class="standard-action-button" data-test="save-summary" type="primary" round :loading="store.saving" @click="save">保存修改</ElButton>
         </div>
       </section>
       <section v-else class="empty-result">

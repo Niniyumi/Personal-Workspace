@@ -40,7 +40,7 @@ Set-Location backend
 registration but makes JWT issuance fail during login.
 
 The file is intentionally excluded from Maven resources, so it cannot enter the WAR. The variables apply only to the current PowerShell process. Keep the terminal open while the
-application runs. On a successful start, Flyway reports schema version `6` and Spring
+application runs. On a successful start, Flyway reports schema version `7` and Spring
 Boot listens on port `8080`.
 
 ## Optional model provider
@@ -51,7 +51,7 @@ DOCX extraction works without a model key. To classify extracted text into the t
 $env:AI_BASE_URL = 'https://api.openai.com/v1'
 $env:DASHSCOPE_API_KEY = Read-Host 'Alibaba Cloud Model Studio API key'
 $env:AI_MODEL = 'your-model-name'
-$env:AI_TIMEOUT_SECONDS = '30'
+$env:AI_TIMEOUT_SECONDS = '120'
 ```
 
 The active provider is selected only by these values. There is no automatic provider chain or retry. If the provider is missing, unavailable, or returns invalid JSON, the extracted text is placed in “本周核心工作” for manual editing.

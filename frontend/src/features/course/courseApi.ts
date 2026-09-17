@@ -7,6 +7,34 @@ function bearer(accessToken: string) {
 
 export function createCourseApi(client: AxiosInstance) {
   return {
+    async createImport(accessToken: string, title: string, fileSize: number, fileName: string): Promise<Course> {
+      const response = await client.post<Course>('/courses/imports', { title, fileSize, fileName }, {
+        headers: bearer(accessToken),
+      })
+      return response.data
+    },
+
+    async importOffset(accessToken: string, courseId: number): Promise<number> {
+      const response = await client.get<{ offset: number }>(`/courses/imports/${courseId}`, {
+        headers: bearer(accessToken),
+      })
+      return response.data.offset
+    },
+
+    async uploadImportChunk(accessToken: string, courseId: number, offset: number, chunk: Blob): Promise<number> {
+      const response = await client.put<{ offset: number }>(`/courses/imports/${courseId}/chunk?offset=${offset}`,
+        chunk, { headers: { ...bearer(accessToken), 'Content-Type': 'application/octet-stream' },
+          timeout: 120000 })
+      return response.data.offset
+    },
+
+    async completeImport(accessToken: string, courseId: number): Promise<Course> {
+      const response = await client.post<Course>(`/courses/imports/${courseId}/complete`, undefined, {
+        headers: bearer(accessToken),
+      })
+      return response.data
+    },
+
     async create(accessToken: string, title: string): Promise<Course> {
       const response = await client.post<Course>('/courses', { title }, { headers: bearer(accessToken) })
       return response.data
@@ -67,6 +95,13 @@ export function createCourseApi(client: AxiosInstance) {
         responseType: 'blob',
       })
       return response.data
+    },
+
+    async originalPlaybackUrl(accessToken: string, courseId: number): Promise<string> {
+      const response = await client.post<{ url: string }>(`/courses/${courseId}/original/playback`, undefined, {
+        headers: bearer(accessToken),
+      })
+      return response.data.url
     },
 
     async retry(accessToken: string, courseId: number): Promise<Course> {

@@ -21,6 +21,7 @@ import com.niniyumi.personalagent.course.application.CourseNotFoundException;
 import com.niniyumi.personalagent.course.application.InvalidCoursePartsException;
 import com.niniyumi.personalagent.course.application.InvalidCourseStateException;
 import com.niniyumi.personalagent.course.application.InvalidCourseTitleException;
+import com.niniyumi.personalagent.course.infrastructure.media.CourseMediaException;
 import com.niniyumi.personalagent.common.logging.RequestTraceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -173,5 +174,15 @@ public class GlobalExceptionHandler {
         log.warn("API request rejected, status={}, code={}, reason={}", status.value(), code, message);
         return ResponseEntity.status(status)
                 .body(new ApiErrorResponse(code, message, RequestTraceContext.currentOrCreate()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidArgument() {
+        return error(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Invalid request value");
+    }
+
+    @ExceptionHandler(CourseMediaException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidAudio(CourseMediaException exception) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_AUDIO_FILE", exception.getMessage());
     }
 }

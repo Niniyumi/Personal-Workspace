@@ -101,6 +101,19 @@ describe('authStore', () => {
     expect(authApi.refresh).toHaveBeenCalledOnce()
     expect(tokenStorage.read()).toBeNull()
     expect(store.status).toBe('anonymous')
+    expect(store.sessionExpired).toBe(true)
+  })
+
+  it('marks the session expired when an api refresh is rejected', async () => {
+    vi.mocked(authApi.refresh).mockRejectedValue(new Error('refresh rejected'))
+    const store = useAuthStore()
+    store.tokens = tokens
+
+    await expect(store.refreshAccessToken()).rejects.toThrow('refresh rejected')
+
+    expect(store.sessionExpired).toBe(true)
+    expect(store.status).toBe('anonymous')
+    expect(store.tokens).toBeNull()
   })
 
   it('registers a user without creating a local session', async () => {
@@ -188,5 +201,6 @@ describe('authStore', () => {
     expect(tokenStorage.read()).toBeNull()
     expect(store.status).toBe('anonymous')
     expect(store.user).toBeNull()
+    expect(store.sessionExpired).toBe(false)
   })
 })

@@ -38,13 +38,15 @@ JWT_SECRET=<至少 16 个字符的密钥>
 DASHSCOPE_API_KEY=<阿里云百炼 API Key>
 AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 AI_MODEL=qwen-plus
-AI_TIMEOUT_SECONDS=30
+AI_TIMEOUT_SECONDS=120
 SPEECH_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 SPEECH_MODEL=qwen3-asr-flash
 SPEECH_TIMEOUT_SECONDS=120
+FFMPEG_PATH=D:\pp-program\Personal-Workspace\.tools\ffmpeg\bin\ffmpeg.exe
+FFPROBE_PATH=D:\pp-program\Personal-Workspace\.tools\ffmpeg\bin\ffprobe.exe
 ```
 
-课程录音和笔记共用一个 `DASHSCOPE_API_KEY`；缺少时课程会保留音频并在详情页明确提示，补齐后可点击“重新处理”。
+课程录音和笔记共用一个 `DASHSCOPE_API_KEY`；缺少时课程会保留音频并在详情页明确提示，补齐后可点击“重新处理”。导入 M4A 还需要 `FFMPEG_PATH` 和 `FFPROBE_PATH` 指向本机程序。当前项目已在 `.tools/ffmpeg/bin` 准备好这两个程序，但 `.tools` 只用于本机，不会提交到 Git，也不会装进 WAR。
 
 不要把真实密码或 JWT 密钥写进 Git 文件。可以在 PowerShell 中生成 JWT 密钥：
 

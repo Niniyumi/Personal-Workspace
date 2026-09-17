@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
       ],
       recentItems: [{ type: 'COURSE', id: 9, title: 'Java', updatedAt: '2026-09-08T04:00:00Z' }],
     },
-    loading: false, error: null, load: vi.fn(),
+    loading: false, error: null as string | null, load: vi.fn(),
   },
 }))
 
@@ -46,5 +46,17 @@ describe('HomeView dashboard', () => {
     expect(wrapper.text()).not.toContain('PHASE 01')
     expect(wrapper.find('textarea').exists()).toBe(false)
     expect(wrapper.find('input[disabled]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="logout"]').classes()).toContain('standard-action-button')
+    expect(wrapper.get('[data-test="open-weekly-reports"]').classes()).toContain('standard-action-button')
+    expect(wrapper.get('.recent-item').classes()).toContain('interactive-row')
+  })
+
+  it('shows the dashboard retry as a visible standard action', async () => {
+    mocks.dashboard.error = '看板加载失败'
+    const wrapper = mount(HomeView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="reload-dashboard"]').classes()).toContain('standard-action-button')
+    mocks.dashboard.error = null
   })
 })

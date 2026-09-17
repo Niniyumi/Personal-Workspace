@@ -12,6 +12,11 @@ store.reset()
 const recorder = useCourseRecorder(store)
 const router = useRouter()
 const title = ref('')
+const selectedAudio = ref<File | null>(null)
+const audioInput = ref<HTMLInputElement | null>(null)
+const importProgress = ref(0)
+const importBusy = ref(false)
+const importError = ref('')
 
 const timeText = computed(() => {
   const minutes = Math.floor(recorder.elapsedSeconds.value / 60).toString().padStart(2, '0')
@@ -20,6 +25,7 @@ const timeText = computed(() => {
 })
 
 const statusText: Record<CourseStatus, string> = {
+  UPLOADING: '上传中',
   RECORDING: '录音中',
   PROCESSING: '正在提取文字',
   TRANSCRIBED: '文字已提取',
@@ -51,6 +57,40 @@ async function retryUpload() {
   }
 }
 
+function selectAudio(event: Event) {
+  selectedAudio.value = (event.target as HTMLInputElement).files?.[0] ?? null
+  importProgress.value = 0
+  importError.value = ''
+}
+
+function openAudioPicker() {
+  audioInput.value?.click()
+}
+
+async function uploadAudio() {
+  if (!selectedAudio.value || importBusy.value) return
+  if (!title.value.trim()) {
+    importError.value = '请先填写课程名称'
+    document.getElementById('course-title')?.focus()
+    return
+  }
+  importBusy.value = true
+  importError.value = ''
+  try {
+    const course = await store.uploadAudio(title.value.trim(), selectedAudio.value,
+      percent => { importProgress.value = percent })
+    await router.push({ name: 'course-detail', params: { id: course.id } })
+  } catch (cause) {
+    const code = (cause as { response?: { data?: { code?: string } } })?.response?.data?.code
+    importError.value = code === 'INVALID_AUDIO_FILE'
+      ? '文件格式或时长不符合要求，请换一份录音文件'
+      : cause instanceof Error && cause.message.startsWith('请选择')
+        ? cause.message : '上传失败，请重新选择同一文件重试'
+  } finally {
+    importBusy.value = false
+  }
+}
+
 function formatDuration(seconds: number) {
   if (!seconds) return '尚未完成录音'
   return `${Math.floor(seconds / 60)} 分钟`
@@ -64,8 +104,8 @@ function formatDuration(seconds: number) {
         <div>
           <RouterLink class="back-link" :to="{ name: 'home' }"><ElIcon><ArrowLeft /></ElIcon> 返回工作台</RouterLink>
           <p>课程笔记</p>
-          <h1>录下课程内容</h1>
-          <span>结束后先保存录音和文字，再由你决定是否生成笔记。</span>
+          <h1>课程录音与笔记</h1>
+          <span>可以现场录音，也可以导入已有录音。</span>
         </div>
         <div class="header-mark"><ElIcon><Headset /></ElIcon></div>
       </header>
@@ -91,7 +131,7 @@ function formatDuration(seconds: number) {
             </small>
           </div>
 
-          <p v-if="recorder.error.value || store.error" class="error-notice" role="alert">
+          <p v-if="recorder.error.value || (store.error && !importError)" class="error-notice" role="alert">
             {{ recorder.error.value || store.error }}
           </p>
 
@@ -115,6 +155,18 @@ function formatDuration(seconds: number) {
               <ElButton type="danger" round @click="stopRecording">结束录音</ElButton>
             </template>
           </div>
+          <div class="import-box">
+            <h3>导入已有录音</h3>
+            <p>支持 M4A、MP3、WAV，最长 150 分钟；先保存原录音，再提取文字。</p>
+            <div class="file-picker">
+              <ElButton round :disabled="importBusy || recorder.isActive.value" @click="openAudioPicker">选择录音文件</ElButton>
+              <span class="file-name">{{ selectedAudio?.name || '未选择文件' }}</span>
+              <input ref="audioInput" id="audio-file" data-test="audio-file" type="file" accept=".m4a,.mp3,.wav" tabindex="-1" aria-label="选择录音文件" :disabled="importBusy || recorder.isActive.value" @change="selectAudio" />
+            </div>
+            <p v-if="importProgress > 0" role="status">已上传 {{ importProgress }}%</p>
+            <p v-if="importError" class="error-notice" role="alert">{{ importError }}</p>
+            <ElButton data-test="upload-audio" type="primary" round :loading="importBusy" :disabled="!selectedAudio || recorder.isActive.value" @click="uploadAudio">开始上传</ElButton>
+          </div>
         </section>
 
         <aside class="history-card">
@@ -129,7 +181,7 @@ function formatDuration(seconds: number) {
               </div>
               <h3>{{ course.title }}</h3>
               <p>{{ formatDuration(course.durationSeconds) }}</p>
-              <RouterLink :to="{ name: 'course-detail', params: { id: course.id } }">查看内容 →</RouterLink>
+              <RouterLink class="action-link" :to="{ name: 'course-detail', params: { id: course.id } }">查看内容 →</RouterLink>
             </article>
           </div>
           <div v-else class="empty-state">还没有课程记录，从左侧开始第一节课。</div>
@@ -161,6 +213,14 @@ function formatDuration(seconds: number) {
 .record-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .record-actions :deep(.el-button) { min-width: 132px; min-height: 46px; margin: 0; }
 .record-actions :deep(.el-button--primary) { --el-button-bg-color: #17181c; --el-button-border-color: #17181c; --el-button-hover-bg-color: #f05a18; --el-button-hover-border-color: #f05a18; }
+.import-box { margin-top: 26px; padding-top: 24px; border-top: 1px solid #eeeae3; }
+.import-box h3 { margin: 0 0 7px; font-size: 18px; }
+.import-box p { color: #77736c; font-size: 13px; }
+.file-picker { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+.file-picker input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.file-picker :deep(.el-button) { min-height: 44px; margin: 0; padding-inline: 20px; font-weight: 700; }
+.file-name { min-width: 0; overflow: hidden; color: #666159; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.import-box :deep(.el-button--primary) { min-width: 132px; min-height: 46px; --el-button-bg-color: #17181c; --el-button-border-color: #17181c; --el-button-hover-bg-color: #f05a18; --el-button-hover-border-color: #f05a18; }
 .error-notice { margin: 16px 0 0; padding: 12px 15px; border-radius: 15px; color: #9f2d13; background: #fff0e9; font-size: 13px; }
 .history-card { align-self: start; color: #fff; background: #24262d; }
 .course-list { display: grid; gap: 12px; }
@@ -169,7 +229,7 @@ function formatDuration(seconds: number) {
 .course-list time { color: #aaaab0; font-size: 11px; }
 .course-list h3 { margin: 14px 0 7px; font-size: 18px; }
 .course-list p { margin: 0 0 12px; color: #aaaab0; font-size: 12px; }
-.course-list a { color: #f89a6f; font-size: 12px; font-weight: 750; text-decoration: none; }
+.course-list a { color: #f89a6f; font-size: 14px; font-weight: 750; text-decoration: none; }
 .empty-state { padding: 34px 18px; border: 1px dashed #4b4d55; border-radius: 20px; color: #aaaab0; font-size: 13px; text-align: center; }
 @media (max-width: 940px) { .course-layout { grid-template-columns: 1fr; } }
 @media (max-width: 620px) { .course-page { padding: 0; } .course-shell { min-height: 100vh; border-radius: 0; } .header-mark { display: none; } .record-actions { display: grid; } .record-actions :deep(.el-button) { width: 100%; } }

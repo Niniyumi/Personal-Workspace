@@ -40,6 +40,52 @@ a {
   transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
 }
 
+.back-link {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #d8d3ca;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.back-link:hover {
+  border-color: #f05a18;
+  color: #e84f12;
+  background: #fff7f2;
+}
+
+.standard-action-button.el-button,
+.secondary-action.el-button {
+  min-height: 44px;
+  padding-inline: 18px;
+  font-weight: 700;
+}
+
+.action-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 15px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.action-link:hover {
+  background: rgb(255 255 255 / 12%);
+}
+
+.interactive-row {
+  padding-inline: 10px;
+  border-radius: 14px;
+}
+
+.interactive-row:hover,
+.interactive-row:focus-visible {
+  background: #f3f0ea;
+}
+
 .auth-form {
   display: grid;
   gap: 22px;

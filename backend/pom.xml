@@ -11,22 +11,9 @@
 	<groupId>com.niniyumi</groupId>
 	<artifactId>personal-agent-backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 	<name>PersonalAgent</name>
 	<description>Personal AI Agent</description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
 	<properties>
 		<java.version>17</java.version>
 		<mybatis-plus.version>3.5.17</mybatis-plus.version>
@@ -36,11 +23,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-tomcat</artifactId>
-			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -99,29 +81,22 @@
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>
-				<!-- 本机数据库和密钥配置只用于本地运行，禁止进入可分发的 WAR。 -->
+				<!-- 本机数据库和密钥配置只用于本地运行，禁止进入可分发的 JAR。 -->
 				<excludes>
 					<exclude>application-local.yml</exclude>
 					<exclude>application-secret.yml</exclude>
 				</excludes>
+			</resource>
+			<resource>
+				<!-- 前端先由 npm 构建，Maven 再把现有 dist 放入可执行 JAR。 -->
+				<directory>../frontend/dist</directory>
+				<targetPath>static</targetPath>
 			</resource>
 		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-			<plugin>
-				<artifactId>maven-war-plugin</artifactId>
-				<configuration>
-					<failOnMissingWebXml>false</failOnMissingWebXml>
-					<!-- 前端构建由 npm 负责，Maven 只把现有 dist 产物打入 WAR。 -->
-					<webResources>
-						<resource>
-							<directory>../frontend/dist</directory>
-						</resource>
-					</webResources>
-				</configuration>
 			</plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

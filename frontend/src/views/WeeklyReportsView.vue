@@ -16,6 +16,9 @@ const batchDrafts = ref<BatchDraft[]>([])
 const batchPending = ref(false)
 const batchSaving = ref(false)
 const batchNotice = ref('')
+const importNotice = ref('')
+const historyPending = ref(false)
+const formPending = ref(false)
 
 interface BatchDraft extends WeeklyReportInput {
   status: 'pending' | 'saved' | 'failed'
@@ -32,14 +35,19 @@ watch([year, month], ([nextYear, nextMonth]) => {
 })
 
 async function loadHistory(nextYear = year.value, nextMonth = month.value) {
+  historyPending.value = true
   try {
     await store.loadMonth(nextYear, nextMonth)
   } catch {
     // Store 已统一提供面向用户的错误信息，页面只需阻止未处理的 Promise。
+  } finally {
+    historyPending.value = false
   }
 }
 
 async function save(input: WeeklyReportInput) {
+  if (formPending.value) return
+  formPending.value = true
   try {
     const created = await store.create(input)
     if (!created) return
@@ -56,18 +64,25 @@ async function save(input: WeeklyReportInput) {
     }
   } catch {
     notice.value = ''
+  } finally {
+    formPending.value = false
   }
 }
 
 async function importFiles(files: File[]) {
   notice.value = ''
+  importNotice.value = ''
   batchNotice.value = ''
   batchDrafts.value = []
   if (files.length === 1 && files[0]) {
+    formPending.value = true
     try {
-      await store.importDocx(files[0])
+      const result = await store.importDocx(files[0])
+      if (result) importNotice.value = `${files[0].name} 已识别，请检查内容后保存。`
     } catch {
       // Store 已提供错误提示。
+    } finally {
+      formPending.value = false
     }
     return
   }
@@ -176,11 +191,12 @@ async function saveBatch() {
         <section class="composer-section">
           <div class="section-title"><span>填写内容</span><h2>新建周报</h2></div>
           <p v-if="notice" class="success-notice" role="status">{{ notice }}</p>
+          <p v-if="importNotice" class="success-notice" data-test="single-import-notice" role="status">{{ importNotice }}</p>
           <p v-if="store.error" class="error-notice" role="alert">{{ store.error }}</p>
           <WeeklyReportForm
             allow-multiple
             :imported="store.imported"
-            :loading="store.loading"
+            :loading="formPending"
             @save="save"
             @import="importFiles"
           />
@@ -206,7 +222,8 @@ async function saveBatch() {
             <label>年份<input v-model.number="year" class="period-control" data-test="history-year" type="number" min="2000" max="2100" /></label>
             <label>月份<input v-model.number="month" class="period-control" data-test="history-month" type="number" min="1" max="12" /></label>
           </div>
-          <div v-if="store.reports.length" class="report-list">
+          <div v-if="historyPending" class="empty-history" data-test="report-history-loading" role="status">正在加载历史周报…</div>
+          <div v-else-if="store.reports.length" class="report-list">
             <article v-for="report in store.reports" :key="report.id">
               <time>{{ report.weekStartDate }}</time>
               <strong>{{ report.coreWork }}</strong>

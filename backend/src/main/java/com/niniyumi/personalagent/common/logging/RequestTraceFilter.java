@@ -28,6 +28,7 @@ public class RequestTraceFilter extends OncePerRequestFilter {
         RequestTraceContext.set(traceId);
         response.setHeader(TRACE_HEADER, traceId);
         boolean apiRequest = request.getRequestURI().startsWith(request.getContextPath() + "/api/");
+        String logPath = safeLogPath(request);
         long startedAt = System.nanoTime();
         String batch = batchProgress(request);
         Exception failure = null;
@@ -35,10 +36,10 @@ public class RequestTraceFilter extends OncePerRequestFilter {
             if (apiRequest) {
                 if (batch == null) {
                     log.info("API request started, method={}, path={}",
-                            request.getMethod(), request.getRequestURI());
+                            request.getMethod(), logPath);
                 } else {
                     log.info("API request started, method={}, path={}, batch={}",
-                            request.getMethod(), request.getRequestURI(), batch);
+                            request.getMethod(), logPath, batch);
                 }
             }
             filterChain.doFilter(request, response);
@@ -48,38 +49,44 @@ public class RequestTraceFilter extends OncePerRequestFilter {
         } finally {
             if (apiRequest) {
                 long durationMs = (System.nanoTime() - startedAt) / 1_000_000;
-                logResult(request, response, batch, durationMs, failure);
+                logResult(request.getMethod(), logPath, response, batch, durationMs, failure);
             }
             RequestTraceContext.clear();
         }
     }
 
-    private void logResult(HttpServletRequest request, HttpServletResponse response, String batch,
+    private void logResult(String method, String path, HttpServletResponse response, String batch,
             long durationMs, Exception failure) {
         if (failure != null) {
             String reason = failure.getMessage() == null ? failure.getClass().getSimpleName() : failure.getMessage();
             log.error("API request crashed, method={}, path={}, exception={}, reason={}, durationMs={}",
-                    request.getMethod(), request.getRequestURI(), failure.getClass().getSimpleName(),
+                    method, path, failure.getClass().getSimpleName(),
                     reason, durationMs, failure);
             return;
         }
         if (response.getStatus() >= 400) {
             if (batch == null) {
                 log.warn("API request failed, method={}, path={}, status={}, durationMs={}",
-                        request.getMethod(), request.getRequestURI(), response.getStatus(), durationMs);
+                        method, path, response.getStatus(), durationMs);
             } else {
                 log.warn("API request failed, method={}, path={}, status={}, batch={}, durationMs={}",
-                        request.getMethod(), request.getRequestURI(), response.getStatus(), batch, durationMs);
+                        method, path, response.getStatus(), batch, durationMs);
             }
             return;
         }
         if (batch == null) {
             log.info("API request completed, method={}, path={}, status={}, durationMs={}",
-                    request.getMethod(), request.getRequestURI(), response.getStatus(), durationMs);
+                    method, path, response.getStatus(), durationMs);
         } else {
             log.info("API request completed, method={}, path={}, status={}, batch={}, durationMs={}",
-                    request.getMethod(), request.getRequestURI(), response.getStatus(), batch, durationMs);
+                    method, path, response.getStatus(), batch, durationMs);
         }
+    }
+
+    private String safeLogPath(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String playbackPrefix = request.getContextPath() + "/api/course-audio/";
+        return path.startsWith(playbackPrefix) ? playbackPrefix + "***" : path;
     }
 
     private String batchProgress(HttpServletRequest request) {

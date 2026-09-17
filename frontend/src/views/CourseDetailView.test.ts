@@ -183,4 +183,40 @@ describe('CourseDetailView', () => {
     expect(wrapper.text()).toContain('完整转写')
     expect(wrapper.get('[data-test="note-generation-error"]').text()).toContain('笔记生成失败，请重试')
   })
+
+  it('shows a stable loading state before the course detail arrives', () => {
+    mocks.store.current = null
+    mocks.loadOne.mockReturnValue(new Promise(() => undefined))
+
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+
+    expect(wrapper.get('[data-test="course-detail-loading"]').text()).toContain('正在加载课程内容')
+  })
+
+  it('prevents duplicate note saves while the request is running', async () => {
+    let finishSave!: (value: unknown) => void
+    mocks.saveNote.mockReturnValue(new Promise(resolve => { finishSave = resolve }))
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+    await wrapper.get('[data-test="course-note"]').setValue('# 新笔记')
+
+    await wrapper.get('[data-test="save-course-note"]').trigger('click')
+
+    expect(wrapper.get('[data-test="save-course-note"]').classes()).toContain('is-loading')
+    finishSave(mocks.store.current)
+    await flushPromises()
+  })
+
+  it('shows loading on the selected audio button while fetching audio', async () => {
+    let finishLoad!: (value: string) => void
+    mocks.loadAudioPart.mockReturnValue(new Promise(resolve => { finishLoad = resolve }))
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    await wrapper.get('[data-test="load-course-audio-1"]').trigger('click')
+
+    expect(wrapper.get('[data-test="load-course-audio-1"]').classes()).toContain('is-loading')
+    finishLoad('blob:audio')
+    await flushPromises()
+  })
 })

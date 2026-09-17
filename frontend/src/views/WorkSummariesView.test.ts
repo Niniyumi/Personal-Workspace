@@ -4,6 +4,7 @@ import WorkSummariesView from './WorkSummariesView.vue'
 
 const mocks = vi.hoisted(() => ({
   generate: vi.fn(),
+  load: vi.fn(),
   update: vi.fn(),
   store: {
     summary: null as null | Record<string, unknown>,
@@ -11,6 +12,7 @@ const mocks = vi.hoisted(() => ({
     saving: false,
     error: null as string | null,
     generate: vi.fn(),
+    load: vi.fn(),
     update: vi.fn(),
   },
 }))
@@ -26,8 +28,10 @@ beforeEach(() => {
   mocks.store.saving = false
   mocks.store.error = null
   mocks.store.generate = mocks.generate
+  mocks.store.load = mocks.load
   mocks.store.update = mocks.update
   mocks.generate.mockResolvedValue(null)
+  mocks.load.mockResolvedValue(null)
 })
 
 describe('WorkSummariesView', () => {
@@ -93,5 +97,20 @@ describe('WorkSummariesView', () => {
 
     expect(mocks.update).toHaveBeenCalledWith(7, expect.objectContaining({ coreContent: '修改后的核心' }))
     expect(wrapper.get('[data-test="save-summary"]').classes()).toContain('standard-action-button')
+  })
+
+  it('shows loading only on the summary action that was clicked', async () => {
+    let finishLoad!: (value: unknown) => void
+    mocks.load.mockReturnValue(new Promise(resolve => { finishLoad = resolve }))
+    const wrapper = mount(WorkSummariesView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    })
+
+    await wrapper.get('[data-test="load-saved-summary"]').trigger('click')
+
+    expect(wrapper.get('[data-test="load-saved-summary"]').classes()).toContain('is-loading')
+    expect(wrapper.get('[data-test="generate-summary"]').classes()).not.toContain('is-loading')
+    finishLoad(null)
+    await flushPromises()
   })
 })

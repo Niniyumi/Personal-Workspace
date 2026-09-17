@@ -10,6 +10,8 @@ const periodType = ref<SummaryPeriodType>('QUARTER')
 const year = ref(new Date().getFullYear())
 const quarter = ref(Math.floor(new Date().getMonth() / 3) + 1)
 const notice = ref('')
+const generating = ref(false)
+const loadingSaved = ref(false)
 const draft = reactive<WorkSummaryInput>({ coreContent: '', routineWork: '', selfScore: 80 })
 
 watch(
@@ -34,15 +36,27 @@ function selection(): WorkSummarySelection {
 }
 
 async function generate() {
+  if (generating.value || loadingSaved.value) return
+  generating.value = true
   notice.value = ''
-  const result = await store.generate(selection())
-  if (result) notice.value = '总结已生成，你可以继续修改后保存。'
+  try {
+    const result = await store.generate(selection())
+    if (result) notice.value = '总结已生成，你可以继续修改后保存。'
+  } finally {
+    generating.value = false
+  }
 }
 
 async function loadSaved() {
+  if (loadingSaved.value || generating.value) return
+  loadingSaved.value = true
   notice.value = ''
-  const result = await store.load(selection())
-  if (result) notice.value = '已读取保存的总结。'
+  try {
+    const result = await store.load(selection())
+    if (result) notice.value = '已读取保存的总结。'
+  } finally {
+    loadingSaved.value = false
+  }
 }
 
 async function save() {
@@ -95,12 +109,13 @@ async function save() {
           </select>
         </label>
         <div class="control-actions">
-          <ElButton round :disabled="store.loading" @click="loadSaved">查看已保存</ElButton>
+          <ElButton data-test="load-saved-summary" round :loading="loadingSaved" :disabled="generating" @click="loadSaved">查看已保存</ElButton>
           <ElButton
             data-test="generate-summary"
             type="primary"
             round
-            :loading="store.loading"
+            :loading="generating"
+            :disabled="loadingSaved"
             @click="generate"
           >生成总结</ElButton>
         </div>

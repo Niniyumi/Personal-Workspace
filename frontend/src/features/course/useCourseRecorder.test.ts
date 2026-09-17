@@ -2,6 +2,31 @@ import { describe, expect, it, vi } from 'vitest'
 import { useCourseRecorder, type CourseRecorderStore, type RecorderLike } from './useCourseRecorder'
 
 describe('useCourseRecorder', () => {
+  it('reports starting while waiting for microphone permission and ignores a duplicate start', async () => {
+    let allowMicrophone: ((stream: MediaStream) => void) | undefined
+    const getUserMedia = vi.fn(() => new Promise<MediaStream>((resolve) => { allowMicrophone = resolve }))
+    const store: CourseRecorderStore = {
+      create: vi.fn(async () => ({ id: 9 })),
+      uploadPart: vi.fn(),
+      complete: vi.fn(),
+    }
+    const controls = useCourseRecorder(store, {
+      getUserMedia,
+      createRecorder: () => new FakeRecorder(),
+      setInterval: vi.fn(() => 1),
+      clearInterval: vi.fn(),
+    })
+
+    const starting = controls.start('课程')
+    expect(controls.status.value).toBe('starting')
+    await controls.start('重复课程')
+    expect(getUserMedia).toHaveBeenCalledOnce()
+
+    allowMicrophone?.({ getTracks: () => [{ stop: vi.fn() }] } as unknown as MediaStream)
+    await starting
+    expect(controls.status.value).toBe('recording')
+  })
+
   it('uploads the final segment before completing the course', async () => {
     const calls: string[] = []
     const store: CourseRecorderStore = {
@@ -57,7 +82,7 @@ describe('useCourseRecorder', () => {
     expect(controls.error.value).toBe('无法使用麦克风，请检查浏览器权限')
   })
 
-  it('stops once at 5400 seconds and completes after the eighteenth segment', async () => {
+  it('stops once at 9000 seconds and completes after the thirtieth segment', async () => {
     const uploaded: number[] = []
     const store: CourseRecorderStore = {
       create: vi.fn(async () => ({ id: 9 })),
@@ -73,13 +98,13 @@ describe('useCourseRecorder', () => {
     })
 
     await controls.start('操作系统')
-    for (let second = 1; second <= 5400; second += 1) {
+    for (let second = 1; second <= 9000; second += 1) {
       tick()
       if (second % 300 === 0) await vi.waitFor(() => expect(uploaded.length).toBe(second / 300))
     }
 
     await vi.waitFor(() => expect(controls.status.value).toBe('processing'))
-    expect(uploaded).toEqual(Array.from({ length: 18 }, (_, index) => index + 1))
+    expect(uploaded).toEqual(Array.from({ length: 30 }, (_, index) => index + 1))
     expect(store.complete).toHaveBeenCalledOnce()
   })
 

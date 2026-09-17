@@ -24,11 +24,11 @@ interface RecorderDependencies {
   clearInterval: (timer: number) => void
 }
 
-type RecorderStatus = 'idle' | 'recording' | 'paused' | 'uploading' | 'processing' | 'error'
+type RecorderStatus = 'idle' | 'starting' | 'recording' | 'paused' | 'uploading' | 'processing' | 'error'
 type PendingPart = { partNumber: number; duration: number; audio: Blob }
 
 const SEGMENT_SECONDS = 300
-const MAX_SECONDS = 5400
+const MAX_SECONDS = 9000
 
 function browserDependencies(): RecorderDependencies {
   return {
@@ -149,6 +149,8 @@ export function useCourseRecorder(
   }
 
   async function start(title: string) {
+    if (status.value !== 'idle' && status.value !== 'error') return
+    status.value = 'starting'
     error.value = null
     canRetry.value = false
     failedParts = []

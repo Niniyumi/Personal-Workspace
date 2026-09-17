@@ -36,7 +36,7 @@
 2. 在 IDEA 打开项目根目录，等待 Maven 导入 `backend/pom.xml`。
 3. 将 Project SDK 和 Maven Runner JRE 设为同一个 JDK；Language level 设为 `21`。
 4. 在 Spring Boot 运行配置中填写 `DB_PASSWORD`、`JWT_SECRET`、`MAIL_USERNAME`、`MAIL_AUTH_CODE`。不要写入 Git。
-5. 开发时分别运行后端主类 `PersonalAgentApplication` 与前端 `npm run dev`；需要 WAR 演示时再按 [IDEA + Tomcat 部署说明](development/idea-tomcat.md) 构建。
+5. 开发时可直接运行后端主类 `PersonalAgentApplication`；需要部署时按 [IDEA + 可执行 JAR](development/idea-jar.md) 构建。
 
 ## 邮箱流程验证
 

@@ -41,6 +41,7 @@ also require `FFMPEG_PATH` and `FFPROBE_PATH`; they are split locally before usi
 - [System design](docs/superpowers/specs/2026-08-23-personal-agent-design.md)
 - [Foundation and authentication implementation plan](docs/superpowers/plans/2026-08-23-foundation-auth-implementation.md)
 - [Local development setup](docs/development/local-setup.md)
+- [IDEA and executable JAR](docs/development/idea-jar.md)
 - [Frontend setup](frontend/README.md)
 - [Login test cases](docs/testing/login-ui-test-cases.md)
 - [Weekly report test cases](docs/testing/weekly-report-test-cases.md)

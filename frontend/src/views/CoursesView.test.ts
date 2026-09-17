@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   loadAll: vi.fn(),
   start: vi.fn(),
   uploadAudio: vi.fn(),
+  recorderStatus: { value: 'idle' },
+  recorderActive: { value: false },
   store: {
     current: null as Record<string, unknown> | null,
     courses: [] as Array<Record<string, unknown>>,
@@ -26,12 +28,12 @@ vi.mock('vue-router', async () => {
 vi.mock('../features/course/courseStore', () => ({ useCourseStore: () => mocks.store }))
 vi.mock('../features/course/useCourseRecorder', () => ({
   useCourseRecorder: () => ({
-    status: ref('idle'),
+    status: mocks.recorderStatus,
     elapsedSeconds: ref(0),
     uploadedParts: ref(0),
     error: ref(null),
     canRetry: ref(false),
-    isActive: ref(false),
+    isActive: mocks.recorderActive,
     start: mocks.start,
     pause: vi.fn(),
     resume: vi.fn(),
@@ -43,6 +45,10 @@ vi.mock('../features/course/useCourseRecorder', () => ({
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.store.courses = []
+  mocks.store.loading = false
+  mocks.store.error = null
+  mocks.recorderStatus.value = 'idle'
+  mocks.recorderActive.value = false
   mocks.store.loadAll = mocks.loadAll
   mocks.store.uploadAudio = mocks.uploadAudio
   mocks.loadAll.mockResolvedValue(undefined)
@@ -100,6 +106,15 @@ describe('CoursesView', () => {
     expect(mocks.start).toHaveBeenCalledWith('Java 并发课')
   })
 
+  it('disables starting another recording while the current recording is uploading', async () => {
+    mocks.recorderStatus.value = 'uploading'
+    const wrapper = mount(CoursesView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await wrapper.get('[data-test="course-title"]').setValue('重复课程')
+
+    expect(wrapper.get('[data-test="start-recording"]').attributes()).toHaveProperty('disabled')
+    expect(wrapper.text()).toContain('正在上传录音')
+  })
+
   it('loads and renders the current users course history', async () => {
     mocks.store.courses = [{
       id: 9,
@@ -115,5 +130,13 @@ describe('CoursesView', () => {
     expect(wrapper.text()).toContain('数据库系统')
     expect(wrapper.text()).toContain('已完成')
     expect(wrapper.get('.course-list a').classes()).toContain('action-link')
+  })
+
+  it('shows course history loading instead of an empty result', () => {
+    mocks.store.loading = true
+    const wrapper = mount(CoursesView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+
+    expect(wrapper.get('[data-test="course-history-loading"]').text()).toContain('正在加载课程记录')
+    expect(wrapper.text()).not.toContain('还没有课程记录')
   })
 })

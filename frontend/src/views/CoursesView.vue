@@ -17,6 +17,16 @@ const audioInput = ref<HTMLInputElement | null>(null)
 const importProgress = ref(0)
 const importBusy = ref(false)
 const importError = ref('')
+const recorderBusy = computed(() => ['starting', 'uploading', 'processing'].includes(recorder.status.value))
+const recorderStatusText = computed(() => ({
+  idle: '等待开始',
+  starting: '正在准备麦克风',
+  recording: `已上传 ${recorder.uploadedParts.value} 个分片`,
+  paused: `已上传 ${recorder.uploadedParts.value} 个分片`,
+  uploading: '正在上传录音',
+  processing: '正在提取文字',
+  error: '操作未完成',
+}[recorder.status.value]))
 
 const timeText = computed(() => {
   const minutes = Math.floor(recorder.elapsedSeconds.value / 60).toString().padStart(2, '0')
@@ -120,15 +130,13 @@ function formatDuration(seconds: number) {
             data-test="course-title"
             maxlength="160"
             placeholder="例如：Java 并发编程"
-            :disabled="recorder.isActive.value"
+            :disabled="recorder.isActive.value || recorderBusy"
           />
 
           <div class="record-display" :class="{ active: recorder.status.value === 'recording' }">
             <span class="record-dot" aria-hidden="true"></span>
             <strong>{{ timeText }}</strong>
-            <small>
-              {{ recorder.status.value === 'idle' ? '等待开始' : recorder.status.value === 'processing' ? '正在提取文字' : `已上传 ${recorder.uploadedParts.value} 个分片` }}
-            </small>
+            <small>{{ recorderStatusText }}</small>
           </div>
 
           <p v-if="recorder.error.value || (store.error && !importError)" class="error-notice" role="alert">
@@ -142,7 +150,8 @@ function formatDuration(seconds: number) {
               data-test="start-recording"
               type="primary"
               round
-              :disabled="!title.trim() || recorder.status.value === 'processing'"
+              :loading="recorder.status.value === 'starting' || recorder.status.value === 'uploading'"
+              :disabled="!title.trim() || importBusy || !['idle', 'error'].includes(recorder.status.value)"
               @click="startRecording"
             ><ElIcon><Microphone /></ElIcon>开始录音</ElButton>
             <template v-else>
@@ -155,23 +164,25 @@ function formatDuration(seconds: number) {
               <ElButton type="danger" round @click="stopRecording">结束录音</ElButton>
             </template>
           </div>
+          <p class="record-limit">现场录音最长 150 分钟，每 5 分钟自动保存一段。</p>
           <div class="import-box">
             <h3>导入已有录音</h3>
             <p>支持 M4A、MP3、WAV，最长 150 分钟；先保存原录音，再提取文字。</p>
             <div class="file-picker">
-              <ElButton round :disabled="importBusy || recorder.isActive.value" @click="openAudioPicker">选择录音文件</ElButton>
+              <ElButton round :disabled="importBusy || recorder.isActive.value || recorderBusy" @click="openAudioPicker">选择录音文件</ElButton>
               <span class="file-name">{{ selectedAudio?.name || '未选择文件' }}</span>
-              <input ref="audioInput" id="audio-file" data-test="audio-file" type="file" accept=".m4a,.mp3,.wav" tabindex="-1" aria-label="选择录音文件" :disabled="importBusy || recorder.isActive.value" @change="selectAudio" />
+              <input ref="audioInput" id="audio-file" data-test="audio-file" type="file" accept=".m4a,.mp3,.wav" tabindex="-1" aria-label="选择录音文件" :disabled="importBusy || recorder.isActive.value || recorderBusy" @change="selectAudio" />
             </div>
             <p v-if="importProgress > 0" role="status">已上传 {{ importProgress }}%</p>
             <p v-if="importError" class="error-notice" role="alert">{{ importError }}</p>
-            <ElButton data-test="upload-audio" type="primary" round :loading="importBusy" :disabled="!selectedAudio || recorder.isActive.value" @click="uploadAudio">开始上传</ElButton>
+            <ElButton data-test="upload-audio" type="primary" round :loading="importBusy" :disabled="!selectedAudio || recorder.isActive.value || recorderBusy" @click="uploadAudio">开始上传</ElButton>
           </div>
         </section>
 
         <aside class="history-card">
           <div class="history-heading"><span>已保存</span><h2>课程记录</h2></div>
-          <div v-if="store.courses.length" class="course-list">
+          <div v-if="store.loading" class="empty-state" data-test="course-history-loading" role="status">正在加载课程记录…</div>
+          <div v-else-if="store.courses.length" class="course-list">
             <article v-for="course in store.courses" :key="course.id">
               <div>
                 <ElTag round :type="course.status === 'FAILED' ? 'danger' : course.status === 'READY' ? 'success' : 'warning'">
@@ -210,6 +221,7 @@ function formatDuration(seconds: number) {
 .record-display small { color: #b9bac0; }
 .record-dot { width: 18px; height: 18px; border: 5px solid #4a4c54; border-radius: 50%; background: #777982; }
 .record-display.active .record-dot { border-color: #ffb394; background: #f05a18; box-shadow: 0 0 0 8px rgb(240 90 24 / 15%); }
+.record-limit { margin: 10px 2px 0; color: #77736c; font-size: 12px; }
 .record-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .record-actions :deep(.el-button) { min-width: 132px; min-height: 46px; margin: 0; }
 .record-actions :deep(.el-button--primary) { --el-button-bg-color: #17181c; --el-button-border-color: #17181c; --el-button-hover-bg-color: #f05a18; --el-button-hover-border-color: #f05a18; }

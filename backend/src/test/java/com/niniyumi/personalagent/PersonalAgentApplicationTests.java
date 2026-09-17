@@ -12,9 +12,9 @@ class PersonalAgentApplicationTests {
 	}
 
 	@Test
-	void applicationSupportsTraditionalWarDeployment() {
-		assertThat(SpringBootServletInitializer.class)
-				.isAssignableFrom(PersonalAgentApplication.class);
+	void applicationUsesExecutableJarBootstrapOnly() {
+		assertThat(SpringBootServletInitializer.class.isAssignableFrom(PersonalAgentApplication.class))
+				.isFalse();
 	}
 
 }

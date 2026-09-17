@@ -54,12 +54,11 @@ server:
 
 logging:
   charset:
-    # IDEA/Tomcat 控制台与日志文件统一使用 UTF-8，避免中文业务日志乱码。
+    # IDEA 控制台与日志文件统一使用 UTF-8，避免中文业务日志乱码。
     console: UTF-8
     file: UTF-8
   file:
-    # IDEA 外置 Tomcat 使用 catalina.base；直接运行时仍落在当前目录的 logs。
-    name: ${LOG_FILE:${catalina.base:.}/logs/personal-agent.log}
+    name: ${LOG_FILE:./logs/personal-agent.log}
   pattern:
     level: "%5p [traceId:%X{traceId:-}]"
   logback:

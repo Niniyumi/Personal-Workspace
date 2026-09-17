@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ChatDotRound, Document, FolderOpened, HomeFilled, Mic, SwitchButton, UserFilled } from '@element-plus/icons-vue'
 import { ElAvatar, ElButton, ElIcon } from 'element-plus'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ActivityChart from '../components/ActivityChart.vue'
 import { useAuthStore } from '../features/auth/authStore'
@@ -10,6 +10,7 @@ import { useDashboardStore } from '../features/dashboard/dashboardStore'
 const auth = useAuthStore()
 const dashboard = useDashboardStore()
 const router = useRouter()
+const logoutPending = ref(false)
 
 const totalMinutes = computed(() => Math.round((dashboard.data?.totalRecordingSeconds ?? 0) / 60))
 const monthMinutes = computed(() => Math.round((dashboard.data?.monthRecordingSeconds ?? 0) / 60))
@@ -21,8 +22,14 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('zh-CN', { month: 
 onMounted(() => dashboard.load())
 
 async function logout() {
-  await auth.logout()
-  await router.push({ name: 'login' })
+  if (logoutPending.value) return
+  logoutPending.value = true
+  try {
+    await auth.logout()
+    await router.push({ name: 'login' })
+  } finally {
+    logoutPending.value = false
+  }
 }
 
 const openWeeklyReports = () => router.push({ name: 'weekly-reports' })
@@ -50,7 +57,7 @@ const openCourses = () => router.push({ name: 'courses' })
       <main>
         <header>
           <div><p>个人工作台</p><h1>今天想整理些什么？</h1><span>你好，{{ auth.user?.displayName }}。</span></div>
-          <ElButton class="standard-action-button" data-test="logout" round :icon="SwitchButton" @click="logout">退出登录</ElButton>
+          <ElButton class="standard-action-button" data-test="logout" round :icon="SwitchButton" :loading="logoutPending" @click="logout">退出登录</ElButton>
         </header>
 
         <div v-if="dashboard.error" class="error" role="alert">
@@ -58,7 +65,9 @@ const openCourses = () => router.push({ name: 'courses' })
           <button class="standard-action-button" data-test="reload-dashboard" type="button" @click="dashboard.load">重新加载</button>
         </div>
 
-        <section class="grid" :class="{ loading: dashboard.loading }">
+        <p v-if="dashboard.loading" class="loading-notice" data-test="dashboard-loading" role="status">正在加载工作台…</p>
+
+        <section class="grid" :class="{ loading: dashboard.loading }" :aria-busy="dashboard.loading">
           <article class="trend card">
             <div class="heading"><div><span class="eyebrow">近六个月</span><h2>内容记录趋势</h2></div><div class="legend"><span><i class="orange"></i>周报</span><span><i class="yellow"></i>笔记</span></div></div>
             <ActivityChart :points="dashboard.data?.monthlyActivity ?? []" />
@@ -113,4 +122,5 @@ const openCourses = () => router.push({ name: 'courses' })
   font-weight: 700;
   text-decoration: none;
 }
+.loading-notice { margin: 24px 0 -14px; color: #77746e; font-size: 13px; }
 </style>

@@ -31,6 +31,8 @@ describe('HomeView dashboard', () => {
     vi.clearAllMocks()
     mocks.dashboard.load = mocks.load
     mocks.auth.logout = mocks.logout
+    mocks.dashboard.loading = false
+    mocks.dashboard.error = null
   })
 
   it('shows real totals and removes development placeholders', async () => {
@@ -58,5 +60,24 @@ describe('HomeView dashboard', () => {
 
     expect(wrapper.get('[data-test="reload-dashboard"]').classes()).toContain('standard-action-button')
     mocks.dashboard.error = null
+  })
+
+  it('shows a dashboard loading message before data is ready', () => {
+    mocks.dashboard.loading = true
+    const wrapper = mount(HomeView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+
+    expect(wrapper.get('[data-test="dashboard-loading"]').text()).toContain('正在加载工作台')
+  })
+
+  it('prevents duplicate logout requests while leaving the workspace', async () => {
+    let finishLogout!: () => void
+    mocks.logout.mockReturnValue(new Promise<void>(resolve => { finishLogout = resolve }))
+    const wrapper = mount(HomeView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+
+    await wrapper.get('[data-test="logout"]').trigger('click')
+
+    expect(wrapper.get('[data-test="logout"]').classes()).toContain('is-loading')
+    finishLogout()
+    await flushPromises()
   })
 })

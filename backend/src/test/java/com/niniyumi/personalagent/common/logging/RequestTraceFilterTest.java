@@ -69,4 +69,18 @@ class RequestTraceFilterTest {
                 .doesNotContain("API request completed");
         assertThat(MDC.get(RequestTraceContext.TRACE_ID)).isNull();
     }
+
+    @Test
+    void masksTemporaryPlaybackTicketInRequestLogs(CapturedOutput output) throws Exception {
+        RequestTraceFilter filter = new RequestTraceFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/api/course-audio/temporary-secret-ticket");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, (ignoredRequest, ignoredResponse) -> response.setStatus(200));
+
+        assertThat(output)
+                .contains("path=/api/course-audio/***")
+                .doesNotContain("temporary-secret-ticket");
+    }
 }

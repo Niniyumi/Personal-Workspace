@@ -7,9 +7,9 @@
 - 项目 `backend/pom.xml` 的编译目标已统一为 Java 17。
 - IDEA 2021.3 官方完整支持 Java 17。继续配置前，需要安装 JDK 17，并在 IDEA 中把它添加为名称为 `17` 的 SDK。
 
-优先采用下面的“内置 Tomcat”方式。它不需要另外下载 Tomcat。
+项目使用 Spring Boot 内置 Tomcat，不需要另外下载或配置 Tomcat。
 
-## 方式一：使用 Spring Boot 内置 Tomcat（推荐）
+## 使用 Spring Boot 内置 Tomcat
 
 ### 1. 打开项目
 
@@ -95,50 +95,6 @@ http://127.0.0.1:5173
 5. 用新密码重新登录。
 
 阿里百炼 Key 不是认证流程必需项。只有生成 AI 周报总结或处理课程录音时才需要 `DASHSCOPE_API_KEY`。
-
-## 方式二：在 IDEA 中配置外置 Tomcat（非必需）
-
-只有需要演示 WAR 部署时才用这一方式。
-
-### 1. 前置条件
-
-- 安装 Apache Tomcat 10.1，不能使用 Tomcat 9。
-- IDEA 必须是 Ultimate 版；Community 版没有 Tomcat Server 运行配置。
-- 先使用终端完成前端与 WAR 构建：
-
-```powershell
-Set-Location D:\pp-program\Personal-Workspace\frontend
-npm run build
-Set-Location ..\backend
-.\mvnw.cmd clean package
-```
-
-WAR 位于：
-
-```text
-D:\pp-program\Personal-Workspace\backend\target\personal-agent.war
-```
-
-### 2. 添加 Tomcat
-
-1. 打开 `File > Settings > Build, Execution, Deployment > Application Servers`。
-2. 点击 `+`，选择 `Tomcat Server`。
-3. `Tomcat Home` 选择 Tomcat 10.1 的解压目录。
-4. 打开 `Run > Edit Configurations`。
-5. 点击 `+ > Tomcat Server > Local`。
-6. `Application server` 选择刚才添加的 Tomcat。
-7. HTTP Port 使用 `8080`。
-8. 在 `Deployment` 页添加 `personal-agent:war exploded`；如果旧 IDEA 无法生成 Artifact，直接把已构建的 `personal-agent.war` 放进 Tomcat 的 `webapps` 目录，再运行 Tomcat。
-9. Application context 设置为 `/`。
-10. 在运行配置的 `Environment variables` 中设置 `DB_USERNAME`、`DB_PASSWORD`、`JWT_SECRET`、`MAIL_USERNAME`、`MAIL_AUTH_CODE`、`DASHSCOPE_API_KEY`、`FFMPEG_PATH` 和 `FFPROBE_PATH`。后两个路径使用 `D:\pp-program\Personal-Workspace\.tools\ffmpeg\bin\ffmpeg.exe` 和同目录的 `ffprobe.exe`。
-
-### 3. 启动
-
-启动 Tomcat 配置后访问：
-
-```text
-http://127.0.0.1:8080/login
-```
 
 ## 推荐的长期处理
 

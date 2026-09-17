@@ -124,4 +124,35 @@ describe('WeeklyReportsView', () => {
     }))
     expect(wrapper.get('[data-test="save-batch-reports"]').classes()).toContain('standard-action-button')
   })
+
+  it('shows history loading instead of an empty month', async () => {
+    let finishLoad!: () => void
+    mocks.loadMonth.mockReturnValue(new Promise<void>(resolve => { finishLoad = resolve }))
+    const wrapper = mount(WeeklyReportsView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    })
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('[data-test="report-history-loading"]').text()).toContain('正在加载历史周报')
+    expect(wrapper.text()).not.toContain('这个月份还没有周报')
+    finishLoad()
+    await flushPromises()
+  })
+
+  it('confirms when one DOCX has been recognized', async () => {
+    mocks.importDocx.mockResolvedValue({
+      weekStartDate: '2026-09-07', coreWork: '完成登录', problems: null,
+      nextWeekPlan: null, sourceFileName: '周报.docx',
+    })
+    const wrapper = mount(WeeklyReportsView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    })
+    const input = wrapper.get('[data-test="weekly-docx-input"]')
+    Object.defineProperty(input.element, 'files', { value: [new File(['a'], '周报.docx')] })
+
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="single-import-notice"]').text()).toContain('周报.docx 已识别')
+  })
 })

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { logApiError } from '../../shared/logApiError'
 import { authenticatedRequest } from '../../shared/authenticatedRequest'
 import { useAuthStore } from '../auth/authStore'
 import { courseApi } from './courseApi'
@@ -31,7 +32,7 @@ export const useCourseStore = defineStore('course', () => {
     try {
       return await authenticatedRequest(operation)
     } catch (cause) {
-      logCourseError(cause)
+      logApiError('course', cause)
       error.value = auth.sessionExpired ? '登录状态已失效，请重新登录' : '操作失败，请稍后重试'
       throw cause
     }
@@ -156,23 +157,8 @@ export const useCourseStore = defineStore('course', () => {
   }
 
   return {
-    courses, current, parts, audioUrls, loading, error, reset, loadAll, loadOne, get: loadOne,
+    courses, current, parts, loading, error, reset, loadAll, loadOne, get: loadOne,
     create, uploadAudio, uploadPart, complete, generateNote, loadParts, loadAudioPart, loadOriginalAudio,
     retry, saveNote, downloadNote,
   }
 })
-
-// 记录接口定位信息，不记录音频内容、访问令牌等敏感数据。
-function logCourseError(cause: unknown) {
-  const requestError = cause as {
-    config?: { method?: string; url?: string }
-    response?: { status?: number; data?: { code?: string; traceId?: string } }
-  }
-  console.error('[course] request failed', {
-    method: requestError.config?.method?.toUpperCase(),
-    url: requestError.config?.url,
-    status: requestError.response?.status,
-    code: requestError.response?.data?.code,
-    traceId: requestError.response?.data?.traceId,
-  })
-}

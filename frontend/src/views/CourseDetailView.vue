@@ -14,6 +14,11 @@ const note = ref('')
 const notice = ref('')
 const downloadPending = ref(false)
 const notePending = ref(false)
+const initialLoading = ref(true)
+const noteSaving = ref(false)
+const retryPending = ref(false)
+const originalAudioPending = ref(false)
+const audioLoading = ref<Set<number>>(new Set())
 const audioSources = ref<Record<number, string>>({})
 const originalAudioSource = ref('')
 let pollTimer: number | null = null
@@ -23,8 +28,12 @@ watch(() => course.value?.noteContent, (content) => {
 }, { immediate: true })
 
 onMounted(async () => {
-  await Promise.all([refresh(), store.loadParts(courseId).catch(() => [])])
-  if (course.value?.status === 'PROCESSING') startPolling()
+  try {
+    await Promise.all([refresh(), store.loadParts(courseId).catch(() => [])])
+    if (course.value?.status === 'PROCESSING') startPolling()
+  } finally {
+    initialLoading.value = false
+  }
 })
 
 onBeforeUnmount(() => {
@@ -50,17 +59,25 @@ function startPolling() {
 }
 
 async function saveNote() {
-  if (!note.value.trim()) return
-  await store.saveNote(courseId, note.value).then(() => {
+  if (!note.value.trim() || noteSaving.value) return
+  noteSaving.value = true
+  try {
+    await store.saveNote(courseId, note.value)
     notice.value = '笔记已保存'
-  }).catch(() => undefined)
+  } catch {
+    // Store 已提供错误信息。
+  } finally {
+    noteSaving.value = false
+  }
 }
 
 async function retry() {
+  if (retryPending.value) return
+  retryPending.value = true
   await store.retry(courseId).then(() => {
     notice.value = ''
     startPolling()
-  }).catch(() => undefined)
+  }).catch(() => undefined).finally(() => { retryPending.value = false })
 }
 
 async function generateNote() {
@@ -73,18 +90,37 @@ async function generateNote() {
 }
 
 async function loadAudio(partNumber: number) {
-  const source = await store.loadAudioPart(courseId, partNumber).catch(() => null)
-  if (source) audioSources.value = { ...audioSources.value, [partNumber]: source }
+  if (audioLoading.value.has(partNumber)) return
+  audioLoading.value = new Set(audioLoading.value).add(partNumber)
+  try {
+    const source = await store.loadAudioPart(courseId, partNumber)
+    if (source) audioSources.value = { ...audioSources.value, [partNumber]: source }
+  } catch {
+    // Store 已提供错误信息。
+  } finally {
+    const next = new Set(audioLoading.value)
+    next.delete(partNumber)
+    audioLoading.value = next
+  }
 }
 
 async function loadOriginalAudio() {
-  originalAudioSource.value = await store.loadOriginalAudio(courseId).catch(() => '')
+  if (originalAudioPending.value) return
+  originalAudioPending.value = true
+  try {
+    originalAudioSource.value = await store.loadOriginalAudio(courseId)
+  } catch {
+    originalAudioSource.value = ''
+  } finally {
+    originalAudioPending.value = false
+  }
 }
 
 async function downloadNote() {
   if (!course.value || downloadPending.value) return
   downloadPending.value = true
   await store.downloadNote(courseId, course.value.title)
+    .then(() => { notice.value = '笔记已开始下载' })
     .catch(() => undefined)
     .finally(() => { downloadPending.value = false })
 }
@@ -102,7 +138,11 @@ async function downloadNote() {
       <p v-if="store.error" class="error-notice" role="alert">{{ store.error }}</p>
       <p v-if="notice" class="success-notice" role="status">{{ notice }}</p>
 
-      <section v-if="course?.status === 'UPLOADING'" class="processing-card">
+      <section v-if="initialLoading" class="processing-card" data-test="course-detail-loading" role="status">
+        <span class="spinner"></span><h2>正在加载课程内容…</h2>
+      </section>
+
+      <section v-else-if="course?.status === 'UPLOADING'" class="processing-card">
         <h2>录音还没上传完</h2>
         <p>回到课程列表，选择同一份录音文件继续上传。</p>
       </section>
@@ -123,7 +163,7 @@ async function downloadNote() {
         <h2>录音处理失败</h2>
         <p>{{ course.errorMessage }}</p>
         <pre v-if="course.transcript">{{ course.transcript }}</pre>
-        <ElButton class="standard-action-button" data-test="retry-course" round type="primary" @click="retry"><ElIcon><Refresh /></ElIcon>重新处理</ElButton>
+        <ElButton class="standard-action-button" data-test="retry-course" round type="primary" :loading="retryPending" @click="retry"><ElIcon><Refresh /></ElIcon>重新处理</ElButton>
       </section>
 
       <div v-else-if="course" class="content-grid">
@@ -135,12 +175,12 @@ async function downloadNote() {
             <div v-if="course.sourceType === 'IMPORT'" class="audio-part original-audio">
               <span>上传的录音</span>
               <audio v-if="originalAudioSource" data-test="original-audio" controls :src="originalAudioSource"></audio>
-              <ElButton v-else class="secondary-action" data-test="load-original-audio" round @click="loadOriginalAudio">加载原始录音</ElButton>
+              <ElButton v-else class="secondary-action" data-test="load-original-audio" round :loading="originalAudioPending" @click="loadOriginalAudio">加载原始录音</ElButton>
             </div>
             <div v-for="part in store.parts" :key="part.id" class="audio-part">
               <span>第 {{ part.partNumber }} 段 · {{ Math.ceil(part.durationSeconds / 60) }} 分钟</span>
               <audio v-if="audioSources[part.partNumber]" controls :src="audioSources[part.partNumber]"></audio>
-              <ElButton v-else class="secondary-action" :data-test="`load-course-audio-${part.partNumber}`" round @click="loadAudio(part.partNumber)">加载录音</ElButton>
+              <ElButton v-else class="secondary-action" :data-test="`load-course-audio-${part.partNumber}`" round :loading="audioLoading.has(part.partNumber)" @click="loadAudio(part.partNumber)">加载录音</ElButton>
             </div>
           </div>
         </section>
@@ -154,7 +194,7 @@ async function downloadNote() {
           <template v-else>
             <ElInput v-model="note" data-test="course-note" type="textarea" :rows="18" />
           <div class="note-actions">
-            <ElButton data-test="save-course-note" round type="primary" @click="saveNote">保存笔记</ElButton>
+            <ElButton data-test="save-course-note" round type="primary" :loading="noteSaving" :disabled="!note.trim()" @click="saveNote">保存笔记</ElButton>
             <ElButton
               data-test="download-course-note"
               round

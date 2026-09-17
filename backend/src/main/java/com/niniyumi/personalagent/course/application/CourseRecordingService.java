@@ -18,9 +18,9 @@ import org.slf4j.LoggerFactory;
 @Service
 public class CourseRecordingService {
     private static final Logger log = LoggerFactory.getLogger(CourseRecordingService.class);
-    public static final int MAX_DURATION_SECONDS = 5400;
-    public static final int MAX_PARTS = 18;
-    public static final long MAX_TOTAL_BYTES = 180L * 1024 * 1024;
+    public static final int MAX_DURATION_SECONDS = 9000;
+    public static final int MAX_PARTS = 30;
+    public static final long MAX_TOTAL_BYTES = 300L * 1024 * 1024;
     private static final Set<String> AUDIO_TYPES = Set.of(
             "audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav", "audio/x-wav");
     private final CourseService courseService;
@@ -63,7 +63,7 @@ public class CourseRecordingService {
             throw new InvalidCourseStateException();
         }
         if (partNumber < 1 || partNumber > MAX_PARTS
-                || durationSeconds < 1 || durationSeconds > 360
+                || durationSeconds < 1 || durationSeconds > 300
                 || file.isEmpty() || !AUDIO_TYPES.contains(file.getContentType())) {
             throw new InvalidCoursePartsException();
         }

@@ -80,20 +80,20 @@ class CourseRecordingServiceTest {
     }
 
     @Test
-    void rejectsPartsThatWouldExceedTheNinetyMinuteLimit() {
-        for (int partNumber = 1; partNumber <= 15; partNumber++) {
-            service.uploadPart(42L, 1L, partNumber, 360,
+    void rejectsPartsThatWouldExceedTheOneHundredFiftyMinuteLimit() {
+        for (int partNumber = 1; partNumber <= 30; partNumber++) {
+            service.uploadPart(42L, 1L, partNumber, 300,
                     new MockMultipartFile("file", "part.webm", "audio/webm", "audio".getBytes()));
         }
 
-        assertThatThrownBy(() -> service.uploadPart(42L, 1L, 16, 1,
+        assertThatThrownBy(() -> service.uploadPart(42L, 1L, 31, 1,
                 new MockMultipartFile("file", "part.webm", "audio/webm", "audio".getBytes())))
                 .isInstanceOf(InvalidCoursePartsException.class);
     }
 
     @Test
     void rejectsUnexpectedFileTypesAndPartNumbers(CapturedOutput output) {
-        assertThatThrownBy(() -> service.uploadPart(42L, 1L, 19, 10,
+        assertThatThrownBy(() -> service.uploadPart(42L, 1L, 31, 10,
                 new MockMultipartFile("file", "part.webm", "audio/webm", "audio".getBytes())))
                 .isInstanceOf(InvalidCoursePartsException.class);
         assertThatThrownBy(() -> service.uploadPart(42L, 1L, 1, 10,
@@ -101,6 +101,13 @@ class CourseRecordingServiceTest {
                 .isInstanceOf(InvalidCoursePartsException.class);
         assertThat(output).contains(
                 "课程录音分段接收失败, userId=42, courseId=1, partNumber=1, fileName=part.txt, fileBytes=5, exceptionType=InvalidCoursePartsException");
+    }
+
+    @Test
+    void rejectsARecordingPartLongerThanFiveMinutes() {
+        assertThatThrownBy(() -> service.uploadPart(42L, 1L, 1, 301,
+                new MockMultipartFile("file", "part.webm", "audio/webm", "audio".getBytes())))
+                .isInstanceOf(InvalidCoursePartsException.class);
     }
 
     private static final class MemoryStorage implements CourseAudioStorage {

@@ -29,17 +29,17 @@ Set-Location backend
 .\mvnw.cmd spring-boot:run
 ```
 
-If you already use the ignored `backend/src/main/resources/application-local.yml`, start it explicitly:
+If you already use the ignored `application-local.yml` in the project root, start it explicitly:
 
 ```powershell
 Set-Location backend
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local" "-Dspring-boot.run.arguments=--spring.config.additional-location=file:./src/main/resources/application-local.yml"
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--spring.config.additional-location=file:../application-local.yml"
 ```
 
 `app.security.jwt-secret` must contain at least 32 ASCII characters. A shorter value allows
 registration but makes JWT issuance fail during login.
 
-The file is intentionally excluded from Maven resources, so it cannot enter the WAR. The variables apply only to the current PowerShell process. Keep the terminal open while the
+The file is intentionally excluded from Maven resources, so it cannot enter the JAR. The variables apply only to the current PowerShell process. Keep the terminal open while the
 application runs. On a successful start, Flyway reports schema version `7` and Spring
 Boot listens on port `8080`.
 
@@ -69,7 +69,7 @@ The command must finish with zero failures and exit code `0`.
 
 ## Build the deployable website
 
-The production WAR contains both the Vue page and Spring Boot backend:
+The executable JAR contains both the Vue page, Spring Boot backend, and embedded Tomcat:
 
 ```powershell
 Set-Location frontend
@@ -78,7 +78,7 @@ Set-Location ../backend
 .\mvnw.cmd clean package
 ```
 
-The result is `backend/target/personal-agent.war`. Local and secret configuration files are excluded from this artifact. For the IDEA server configuration and deployment flow, see [IDEA + Tomcat 本地部署](idea-tomcat.md).
+The result is `backend/target/personal-agent.jar`. Local and secret configuration files are excluded from this artifact. From `backend`, run it with `java -jar target/personal-agent.jar --spring.config.additional-location=file:../application-local.yml`. For IDEA configuration, see [IDEA + executable JAR](idea-jar.md).
 
 ## Authentication smoke-test flow
 

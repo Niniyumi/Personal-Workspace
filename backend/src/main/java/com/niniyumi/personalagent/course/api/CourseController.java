@@ -7,6 +7,7 @@ import com.niniyumi.personalagent.course.api.dto.CourseSummaryResponse;
 import com.niniyumi.personalagent.course.api.dto.CreateCourseRequest;
 import com.niniyumi.personalagent.course.api.dto.CreateCourseImportRequest;
 import com.niniyumi.personalagent.course.api.dto.UpdateCourseNoteRequest;
+import com.niniyumi.personalagent.course.api.dto.ResolveNoteCandidateRequest;
 import com.niniyumi.personalagent.course.application.CourseProcessingService;
 import com.niniyumi.personalagent.course.application.CourseAudioService;
 import com.niniyumi.personalagent.course.application.CourseRecordingService;
@@ -216,6 +217,14 @@ public class CourseController {
             @PathVariable long courseId,
             @Valid @RequestBody UpdateCourseNoteRequest request) {
         return CourseResponse.from(courseService.saveNote(user.userId(), courseId, request.noteContent()));
+    }
+
+    @PutMapping("/{courseId}/note/candidate")
+    public CourseResponse resolveNoteCandidate(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable long courseId,
+            @Valid @RequestBody ResolveNoteCandidateRequest request) {
+        return CourseResponse.from(courseService.resolveNoteCandidate(user.userId(), courseId, request.action()));
     }
 
     @GetMapping(value = "/{courseId}/note.docx",

@@ -16,6 +16,7 @@ const course: Course = {
   processingProgress: 0,
   transcript: null,
   noteContent: null,
+  noteCandidate: null,
   errorMessage: null,
   createdAt: '2026-08-24T12:00:00Z',
   updatedAt: '2026-08-24T12:00:00Z',

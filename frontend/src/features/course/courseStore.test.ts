@@ -46,6 +46,7 @@ describe('courseStore', () => {
     useAuthStore().tokens = { accessToken: 'access', refreshToken: 'refresh', expiresInSeconds: 900 }
     const imported = { id: 9, title: '网络课', status: 'UPLOADING' as const,
       durationSeconds: 0, processingProgress: 0, transcript: null, noteContent: null,
+      noteCandidate: null,
       errorMessage: null, sourceType: 'IMPORT' as const, createdAt: '', updatedAt: '' }
     vi.mocked(courseApi.createImport).mockResolvedValue(imported)
     vi.mocked(courseApi.importOffset).mockResolvedValue(0)

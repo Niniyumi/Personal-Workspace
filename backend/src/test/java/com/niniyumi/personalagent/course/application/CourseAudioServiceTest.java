@@ -50,7 +50,7 @@ class CourseAudioServiceTest {
 
     private CourseAudioService service() {
         return new CourseAudioService(
-                new CourseService(courses, Clock.fixed(NOW, ZoneOffset.UTC)), parts, storage);
+                new CourseService(courses, Clock.fixed(NOW, ZoneOffset.UTC), new TranscriptSanitizer()), parts, storage);
     }
 
     private record SingleCourseRepository(Course course) implements CourseRepository {

@@ -34,7 +34,8 @@ class CourseRecordingServiceTest {
     @BeforeEach
     void setUp() {
         CourseService courseService = new CourseService(
-                courses, Clock.fixed(Instant.parse("2026-08-24T12:00:00Z"), ZoneOffset.UTC));
+                courses, Clock.fixed(Instant.parse("2026-08-24T12:00:00Z"), ZoneOffset.UTC),
+                new TranscriptSanitizer());
         Course course = courseService.create(42L, "操作系统");
         service = new CourseRecordingService(courseService, courses, parts, storage,
                 Clock.fixed(Instant.parse("2026-08-24T12:01:00Z"), ZoneOffset.UTC));

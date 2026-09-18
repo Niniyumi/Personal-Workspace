@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ArrowLeft, Download, Refresh } from '@element-plus/icons-vue'
-import { ElButton, ElIcon, ElInput, ElProgress } from 'element-plus'
+import { ElButton, ElIcon, ElInput, ElMessageBox, ElProgress } from 'element-plus'
 import { useRoute } from 'vue-router'
 import { useCourseStore } from '../features/course/courseStore'
 
@@ -18,8 +18,9 @@ const initialLoading = ref(true)
 const noteSaving = ref(false)
 const retryPending = ref(false)
 const originalAudioPending = ref(false)
-const audioLoading = ref<Set<number>>(new Set())
-const audioSources = ref<Record<number, string>>({})
+const audioLoading = ref(false)
+const currentPartIndex = ref(0)
+const audioSource = ref('')
 const originalAudioSource = ref('')
 let pollTimer: number | null = null
 
@@ -89,19 +90,38 @@ async function generateNote() {
   }).catch(() => undefined).finally(() => { notePending.value = false })
 }
 
-async function loadAudio(partNumber: number) {
-  if (audioLoading.value.has(partNumber)) return
-  audioLoading.value = new Set(audioLoading.value).add(partNumber)
+async function loadAudioAt(index: number, autoplay = false) {
+  const part = store.parts[index]
+  if (!part || audioLoading.value) return
+  audioLoading.value = true
   try {
-    const source = await store.loadAudioPart(courseId, partNumber)
-    if (source) audioSources.value = { ...audioSources.value, [partNumber]: source }
+    const source = await store.loadAudioPart(courseId, part.partNumber)
+    if (source) {
+      currentPartIndex.value = index
+      audioSource.value = source
+      if (autoplay) requestAnimationFrame(() => {
+        void document.querySelector<HTMLAudioElement>('[data-test="continuous-audio"]')?.play()
+      })
+    }
   } catch {
     // Store 已提供错误信息。
   } finally {
-    const next = new Set(audioLoading.value)
-    next.delete(partNumber)
-    audioLoading.value = next
+    audioLoading.value = false
   }
+}
+
+async function playNextPart() {
+  await loadAudioAt(currentPartIndex.value + 1, true)
+}
+
+async function resolveCandidate(action: 'REPLACE' | 'APPEND' | 'DISCARD') {
+  if (action === 'REPLACE') {
+    await ElMessageBox.confirm('确定用新结果覆盖当前笔记吗？', '替换笔记', { type: 'warning' })
+      .catch(() => { throw new Error('cancelled') })
+  }
+  await store.resolveNoteCandidate(courseId, action).then(() => {
+    notice.value = action === 'DISCARD' ? '已保留原笔记' : '笔记已更新'
+  }).catch(() => undefined)
 }
 
 async function loadOriginalAudio() {
@@ -147,7 +167,7 @@ async function downloadNote() {
         <p>回到课程列表，选择同一份录音文件继续上传。</p>
       </section>
 
-      <section v-else-if="course?.status === 'PROCESSING'" class="processing-card" aria-busy="true">
+      <section v-else-if="course?.status === 'PROCESSING' && !course.noteContent" class="processing-card" aria-busy="true">
         <span class="spinner"></span><h2>{{ course.transcript ? '正在生成笔记' : '正在提取录音文字' }}</h2>
         <ElProgress
           data-test="course-progress"
@@ -177,15 +197,20 @@ async function downloadNote() {
               <audio v-if="originalAudioSource" data-test="original-audio" controls :src="originalAudioSource"></audio>
               <ElButton v-else class="secondary-action" data-test="load-original-audio" round :loading="originalAudioPending" @click="loadOriginalAudio">加载原始录音</ElButton>
             </div>
-            <div v-for="part in store.parts" :key="part.id" class="audio-part">
-              <span>第 {{ part.partNumber }} 段 · {{ Math.ceil(part.durationSeconds / 60) }} 分钟</span>
-              <audio v-if="audioSources[part.partNumber]" controls :src="audioSources[part.partNumber]"></audio>
-              <ElButton v-else class="secondary-action" :data-test="`load-course-audio-${part.partNumber}`" round :loading="audioLoading.has(part.partNumber)" @click="loadAudio(part.partNumber)">加载录音</ElButton>
+            <div v-else-if="store.parts.length" class="audio-part continuous-audio">
+              <span>连续播放 · 第 {{ currentPartIndex + 1 }}/{{ store.parts.length }} 段</span>
+              <audio v-if="audioSource" data-test="continuous-audio" controls :src="audioSource" @ended="playNextPart"></audio>
+              <ElButton v-else class="secondary-action" data-test="load-course-audio" round :loading="audioLoading" @click="loadAudioAt(0)">播放完整录音</ElButton>
             </div>
           </div>
         </section>
         <section class="content-card note-card">
           <span>整理结果</span><h2>课程笔记</h2>
+          <div v-if="course.status === 'PROCESSING' && course.noteContent" class="regeneration-progress" role="status">
+            正在重新生成，当前笔记已安全保留。
+            <ElProgress data-test="course-progress" :percentage="course.processingProgress" :stroke-width="8" />
+          </div>
+          <p v-if="course.status === 'READY' && course.errorMessage" data-test="note-generation-error" class="note-error" role="alert">{{ course.errorMessage }}</p>
           <div v-if="course.status === 'TRANSCRIBED'" class="generate-box">
             <p v-if="course.errorMessage" data-test="note-generation-error" class="note-error" role="alert">{{ course.errorMessage }}</p>
             <p>文字已经保存。需要时再调用大模型整理成笔记。</p>
@@ -193,8 +218,18 @@ async function downloadNote() {
           </div>
           <template v-else>
             <ElInput v-model="note" data-test="course-note" type="textarea" :rows="18" />
+          <div v-if="course.noteCandidate" class="candidate-box">
+            <strong>新生成的笔记</strong>
+            <pre>{{ course.noteCandidate }}</pre>
+            <div class="note-actions">
+              <ElButton data-test="replace-note-candidate" round type="primary" @click="resolveCandidate('REPLACE')">替换原笔记</ElButton>
+              <ElButton data-test="append-note-candidate" round @click="resolveCandidate('APPEND')">追加为补充</ElButton>
+              <ElButton data-test="discard-note-candidate" round @click="resolveCandidate('DISCARD')">保留原笔记</ElButton>
+            </div>
+          </div>
           <div class="note-actions">
             <ElButton data-test="save-course-note" round type="primary" :loading="noteSaving" :disabled="!note.trim()" @click="saveNote">保存笔记</ElButton>
+            <ElButton v-if="course.status === 'READY' && !course.noteCandidate" data-test="regenerate-course-note" round :loading="notePending" @click="generateNote">重新生成</ElButton>
             <ElButton
               data-test="download-course-note"
               round
@@ -230,6 +265,8 @@ async function downloadNote() {
 .note-card { background: #24262d; color: #fff; }
 .generate-box { padding: 28px 0; color: #c3c4c8; line-height: 1.7; }
 .generate-box .note-error { padding: 11px 13px; border-radius: 12px; color: #ffd2c1; background: #4b2a25; }
+.regeneration-progress, .candidate-box { margin-bottom: 16px; padding: 16px; border-radius: 16px; background: #343740; color: #e8e8ea; }
+.candidate-box pre { max-height: 260px; margin: 12px 0; color: #e8e8ea; }
 .note-card :deep(.el-textarea__inner) { padding: 18px; border: 0; border-radius: 18px; box-shadow: none; line-height: 1.7; }
 .note-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 .note-card :deep(.el-button) { min-height: 44px; margin: 0; }

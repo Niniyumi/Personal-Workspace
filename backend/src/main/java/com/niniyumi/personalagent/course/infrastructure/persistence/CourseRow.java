@@ -29,6 +29,8 @@ public class CourseRow {
     private String originalAudioPath;
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Long expectedBytes;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String noteCandidate;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -46,6 +48,7 @@ public class CourseRow {
         row.sourceType = course.sourceType();
         row.originalAudioPath = course.originalAudioPath();
         row.expectedBytes = course.expectedBytes();
+        row.noteCandidate = course.noteCandidate();
         row.createdAt = course.createdAt();
         row.updatedAt = course.updatedAt();
         return row;
@@ -53,7 +56,7 @@ public class CourseRow {
 
     Course toDomain() {
         return new Course(id, userId, title, status, durationSeconds, processingProgress, transcript, noteContent,
-                errorMessage, sourceType, originalAudioPath, expectedBytes, createdAt, updatedAt);
+                errorMessage, sourceType, originalAudioPath, expectedBytes, noteCandidate, createdAt, updatedAt);
     }
 
     public Long getId() { return id; }
@@ -68,6 +71,7 @@ public class CourseRow {
     public String getSourceType() { return sourceType; }
     public String getOriginalAudioPath() { return originalAudioPath; }
     public Long getExpectedBytes() { return expectedBytes; }
+    public String getNoteCandidate() { return noteCandidate; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setId(Long id) { this.id = id; }
@@ -82,6 +86,7 @@ public class CourseRow {
     public void setSourceType(String sourceType) { this.sourceType = sourceType; }
     public void setOriginalAudioPath(String originalAudioPath) { this.originalAudioPath = originalAudioPath; }
     public void setExpectedBytes(Long expectedBytes) { this.expectedBytes = expectedBytes; }
+    public void setNoteCandidate(String noteCandidate) { this.noteCandidate = noteCandidate; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

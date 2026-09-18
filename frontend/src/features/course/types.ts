@@ -8,6 +8,7 @@ export interface Course {
   processingProgress: number
   transcript: string | null
   noteContent: string | null
+  noteCandidate: string | null
   errorMessage: string | null
   sourceType?: 'IMPORT' | 'RECORDING'
   createdAt: string

@@ -146,6 +146,13 @@ export const useCourseStore = defineStore('course', () => {
     return course
   }
 
+  async function resolveNoteCandidate(courseId: number, action: 'REPLACE' | 'APPEND' | 'DISCARD') {
+    const requestGeneration = generation
+    const course = await request(token => courseApi.resolveNoteCandidate(token, courseId, action))
+    if (requestGeneration === generation) current.value = course
+    return course
+  }
+
   async function downloadNote(courseId: number, title: string) {
     const blob = await request((token) => courseApi.downloadNote(token, courseId))
     const url = URL.createObjectURL(blob)
@@ -159,6 +166,6 @@ export const useCourseStore = defineStore('course', () => {
   return {
     courses, current, parts, loading, error, reset, loadAll, loadOne, get: loadOne,
     create, uploadAudio, uploadPart, complete, generateNote, loadParts, loadAudioPart, loadOriginalAudio,
-    retry, saveNote, downloadNote,
+    retry, saveNote, resolveNoteCandidate, downloadNote,
   }
 })

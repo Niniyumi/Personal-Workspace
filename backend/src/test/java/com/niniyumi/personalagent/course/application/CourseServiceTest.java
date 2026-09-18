@@ -23,7 +23,8 @@ class CourseServiceTest {
     void setUp() {
         service = new CourseService(
                 repository,
-                Clock.fixed(Instant.parse("2026-08-24T12:00:00Z"), ZoneOffset.UTC));
+                Clock.fixed(Instant.parse("2026-08-24T12:00:00Z"), ZoneOffset.UTC),
+                new TranscriptSanitizer());
     }
 
     @Test
@@ -92,6 +93,39 @@ class CourseServiceTest {
 
         assertThatThrownBy(() -> service.beginNoteGeneration(42L, created.id()))
                 .isInstanceOf(InvalidCourseStateException.class);
+    }
+
+    @Test
+    void startsRegenerationWithoutDeletingTheSavedNote() {
+        Course created = service.create(42L, "Spring Boot");
+        repository.update(new Course(
+                created.id(), created.userId(), created.title(), CourseStatus.READY, 80,
+                100, "完整转写", "旧笔记", null, created.createdAt(), created.updatedAt()));
+
+        Course processing = service.beginNoteGeneration(42L, created.id());
+
+        assertThat(processing.status()).isEqualTo(CourseStatus.PROCESSING);
+        assertThat(processing.noteContent()).isEqualTo("旧笔记");
+    }
+
+    @Test
+    void resolvesARegeneratedCandidateByAppendingOrReplacingIt() {
+        Course created = service.create(42L, "Spring Boot");
+        repository.update(new Course(
+                created.id(), created.userId(), created.title(), CourseStatus.READY, 80,
+                100, "完整转写", "旧笔记", null, "RECORDING", null, null,
+                "新生成笔记", created.createdAt(), created.updatedAt()));
+
+        Course appended = service.resolveNoteCandidate(42L, created.id(), NoteCandidateAction.APPEND);
+        assertThat(appended.noteContent()).contains("旧笔记").contains("新生成笔记");
+        assertThat(appended.noteCandidate()).isNull();
+
+        repository.update(new Course(
+                appended.id(), appended.userId(), appended.title(), CourseStatus.READY, 80,
+                100, "完整转写", "旧笔记", null, "RECORDING", null, null,
+                "替换笔记", appended.createdAt(), appended.updatedAt()));
+        assertThat(service.resolveNoteCandidate(42L, created.id(), NoteCandidateAction.REPLACE).noteContent())
+                .isEqualTo("替换笔记");
     }
 
     private static final class InMemoryCourseRepository implements CourseRepository {

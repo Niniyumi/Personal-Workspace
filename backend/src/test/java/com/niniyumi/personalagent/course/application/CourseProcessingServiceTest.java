@@ -146,9 +146,35 @@ class CourseProcessingServiceTest {
         assertThat(courses.value.errorMessage()).isEqualTo("笔记生成失败，请重试");
     }
 
+    @Test
+    void storesRegeneratedContentAsACandidateAndKeepsTheSavedNote() {
+        courses.value = new Course(9L, 42L, "计算机网络", CourseStatus.PROCESSING, 600,
+                85, "完整课堂转写", "旧笔记", null, now, now);
+
+        service(path -> "不会执行", (system, user) -> "新生成笔记").generateNote(42L, 9L);
+
+        assertThat(courses.value.status()).isEqualTo(CourseStatus.READY);
+        assertThat(courses.value.noteContent()).isEqualTo("旧笔记");
+        assertThat(courses.value.noteCandidate()).isEqualTo("新生成笔记");
+    }
+
+    @Test
+    void removesAbnormalEnglishRepetitionBeforeSavingAndSummarizing() {
+        String repeated = "课程开始。" + "Jerrycat".repeat(8) + "课程结束。";
+        courses.value = new Course(9L, 42L, "计算机网络", CourseStatus.PROCESSING, 600,
+                85, repeated, null, null, now, now);
+        List<String> requests = new ArrayList<>();
+
+        service(path -> "不会执行", (system, user) -> { requests.add(user); return "笔记"; })
+                .generateNote(42L, 9L);
+
+        assertThat(courses.value.transcript()).isEqualTo("课程开始。Jerrycat课程结束。");
+        assertThat(requests).containsExactly("课程开始。Jerrycat课程结束。");
+    }
+
     private CourseProcessingService service(SpeechProvider speech, ChatProvider chat) {
         return new CourseProcessingService(courses, parts, speech, chat,
-                Clock.fixed(now.plusSeconds(60), ZoneOffset.UTC));
+                Clock.fixed(now.plusSeconds(60), ZoneOffset.UTC), new TranscriptSanitizer());
     }
 
     private static final class MemoryCourseRepository implements CourseRepository {

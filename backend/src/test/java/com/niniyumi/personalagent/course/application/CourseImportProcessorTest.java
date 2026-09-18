@@ -54,7 +54,7 @@ class CourseImportProcessorTest {
         Clock clock = Clock.fixed(now, ZoneOffset.UTC);
         CourseProcessingService processing = new CourseProcessingService(courses, parts,
                 path -> path.toString().contains("001") ? "第一段" : "第二段",
-                (system, user) -> "not called", clock);
+                (system, user) -> "not called", clock, new TranscriptSanitizer());
 
         new CourseImportProcessor(courses, parts, segmenter, processing, clock).process(42, 9);
 
@@ -75,7 +75,7 @@ class CourseImportProcessorTest {
         };
         Clock clock = Clock.fixed(now, ZoneOffset.UTC);
         CourseProcessingService processing = new CourseProcessingService(courses, parts,
-                path -> "not called", (system, user) -> "not called", clock);
+                path -> "not called", (system, user) -> "not called", clock, new TranscriptSanitizer());
 
         new CourseImportProcessor(courses, parts, segmenter, processing, clock).process(42, 9);
 
@@ -91,7 +91,7 @@ class CourseImportProcessorTest {
                         Path.of("part-" + number + ".webm"), 265, 1024)).toList();
         Clock clock = Clock.fixed(now, ZoneOffset.UTC);
         CourseProcessingService processing = new CourseProcessingService(courses, parts,
-                path -> "文字", (system, user) -> "not called", clock);
+                path -> "文字", (system, user) -> "not called", clock, new TranscriptSanitizer());
 
         new CourseImportProcessor(courses, parts, segmenter, processing, clock).process(42, 9);
 

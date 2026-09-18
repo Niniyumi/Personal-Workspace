@@ -118,6 +118,17 @@ export function createCourseApi(client: AxiosInstance) {
       return response.data
     },
 
+    async resolveNoteCandidate(
+      accessToken: string,
+      courseId: number,
+      action: 'REPLACE' | 'APPEND' | 'DISCARD',
+    ): Promise<Course> {
+      const response = await client.put<Course>(`/courses/${courseId}/note/candidate`, { action }, {
+        headers: bearer(accessToken),
+      })
+      return response.data
+    },
+
     async downloadNote(accessToken: string, courseId: number): Promise<Blob> {
       const response = await client.get<Blob>(`/courses/${courseId}/note.docx`, {
         headers: bearer(accessToken),

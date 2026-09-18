@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   retry: vi.fn(),
   downloadNote: vi.fn(),
   generateNote: vi.fn(),
+  resolveNoteCandidate: vi.fn(),
   loadParts: vi.fn(),
   loadAudioPart: vi.fn(),
   loadOriginalAudio: vi.fn(),
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
     retry: vi.fn(),
     downloadNote: vi.fn(),
     generateNote: vi.fn(),
+    resolveNoteCandidate: vi.fn(),
     loadParts: vi.fn(),
     loadAudioPart: vi.fn(),
     loadOriginalAudio: vi.fn(),
@@ -35,11 +37,13 @@ vi.mock('../features/course/courseStore', () => ({ useCourseStore: () => mocks.s
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.store.parts = [{ id: 1, partNumber: 1, durationSeconds: 120, fileSize: 5 }]
   mocks.store.loadOne = mocks.loadOne
   mocks.store.saveNote = mocks.saveNote
   mocks.store.retry = mocks.retry
   mocks.store.downloadNote = mocks.downloadNote
   mocks.store.generateNote = mocks.generateNote
+  mocks.store.resolveNoteCandidate = mocks.resolveNoteCandidate
   mocks.store.loadParts = mocks.loadParts
   mocks.store.loadAudioPart = mocks.loadAudioPart
   mocks.store.loadOriginalAudio = mocks.loadOriginalAudio
@@ -58,6 +62,7 @@ beforeEach(() => {
   mocks.retry.mockResolvedValue(mocks.store.current)
   mocks.downloadNote.mockResolvedValue(undefined)
   mocks.generateNote.mockResolvedValue(mocks.store.current)
+  mocks.resolveNoteCandidate.mockResolvedValue(mocks.store.current)
   mocks.loadParts.mockResolvedValue(mocks.store.parts)
   mocks.loadAudioPart.mockResolvedValue('blob:audio')
   mocks.loadOriginalAudio.mockResolvedValue('/api/course-audio/ticket')
@@ -149,11 +154,43 @@ describe('CourseDetailView', () => {
     const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
 
-    await wrapper.get('[data-test="load-course-audio-1"]').trigger('click')
+    await wrapper.get('[data-test="load-course-audio"]').trigger('click')
     await flushPromises()
 
     expect(mocks.loadAudioPart).toHaveBeenCalledWith(9, 1)
     expect(wrapper.get('audio').attributes('src')).toBe('blob:audio')
+  })
+
+  it('plays recorded parts through one player and advances automatically', async () => {
+    mocks.store.parts = [
+      { id: 1, partNumber: 1, durationSeconds: 60, fileSize: 5 },
+      { id: 2, partNumber: 2, durationSeconds: 60, fileSize: 5 },
+    ]
+    mocks.loadParts.mockResolvedValue(mocks.store.parts)
+    mocks.loadAudioPart.mockImplementation(async (_courseId: number, part: number) => `blob:audio-${part}`)
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    await wrapper.get('[data-test="load-course-audio"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('audio')).toHaveLength(1)
+    expect(wrapper.get('audio').attributes('src')).toBe('blob:audio-1')
+
+    await wrapper.get('audio').trigger('ended')
+    await flushPromises()
+    expect(mocks.loadAudioPart).toHaveBeenCalledWith(9, 2)
+    expect(wrapper.get('audio').attributes('src')).toBe('blob:audio-2')
+  })
+
+  it('offers explicit choices for a regenerated note candidate', async () => {
+    mocks.store.current = { ...mocks.store.current, noteCandidate: '新生成笔记' }
+    mocks.loadOne.mockResolvedValue(mocks.store.current)
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('新生成笔记')
+    await wrapper.get('[data-test="append-note-candidate"]').trigger('click')
+    expect(mocks.resolveNoteCandidate).toHaveBeenCalledWith(9, 'APPEND')
   })
 
   it('streams the imported original M4A through a playback URL', async () => {
@@ -213,9 +250,9 @@ describe('CourseDetailView', () => {
     const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
     await flushPromises()
 
-    await wrapper.get('[data-test="load-course-audio-1"]').trigger('click')
+    await wrapper.get('[data-test="load-course-audio"]').trigger('click')
 
-    expect(wrapper.get('[data-test="load-course-audio-1"]').classes()).toContain('is-loading')
+    expect(wrapper.get('[data-test="load-course-audio"]').classes()).toContain('is-loading')
     finishLoad('blob:audio')
     await flushPromises()
   })

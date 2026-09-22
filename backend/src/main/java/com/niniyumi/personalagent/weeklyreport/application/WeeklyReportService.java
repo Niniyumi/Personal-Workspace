@@ -2,6 +2,7 @@ package com.niniyumi.personalagent.weeklyreport.application;
 
 import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReport;
 import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReportRepository;
+import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReportPage;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -72,6 +73,14 @@ public class WeeklyReportService {
         YearMonth selectedMonth = YearMonth.of(year, month);
         return repository.findByUserIdAndWeekStartDateBetween(
                 userId, selectedMonth.atDay(1), selectedMonth.atEndOfMonth());
+    }
+
+    public WeeklyReportPage search(long userId, int year, Integer month, String keyword, int page) {
+        LocalDate start = month == null || month == 0
+                ? LocalDate.of(year, 1, 1) : YearMonth.of(year, month).atDay(1);
+        LocalDate end = month == null || month == 0
+                ? LocalDate.of(year, 12, 31) : YearMonth.of(year, month).atEndOfMonth();
+        return repository.search(userId, start, end, keyword, Math.max(1, page));
     }
 
     private void validateWeekStart(LocalDate weekStartDate) {

@@ -26,6 +26,7 @@ import com.niniyumi.personalagent.course.application.CourseService;
 import com.niniyumi.personalagent.course.application.CourseImportService;
 import com.niniyumi.personalagent.course.application.CourseImportProcessor;
 import com.niniyumi.personalagent.course.application.CoursePlaybackService;
+import com.niniyumi.personalagent.course.domain.CourseProgress;
 import com.niniyumi.personalagent.course.domain.Course;
 import com.niniyumi.personalagent.course.domain.CourseAudioPart;
 import com.niniyumi.personalagent.course.domain.CourseStatus;
@@ -89,7 +90,7 @@ class CourseControllerTest {
         Course processing = new Course(9L, 42L, "网络课", CourseStatus.PROCESSING, 0, 0,
                 null, null, null, "IMPORT", "audio/original.m4a", 6L,
                 Instant.parse("2026-08-24T12:00:00Z"), Instant.parse("2026-08-24T12:00:00Z"));
-        when(importService.create(42L, "网络课", 6L, "lecture.mp3")).thenReturn(uploading);
+        when(importService.create(42L, "网络课", 6L, "lecture.mp3", null)).thenReturn(uploading);
         when(importService.append(anyLong(), anyLong(), anyLong(), any())).thenReturn(6L);
         when(importService.finish(42L, 9L)).thenReturn(processing);
 
@@ -145,7 +146,7 @@ class CourseControllerTest {
 
     @Test
     void createsAndListsOwnedCourses() throws Exception {
-        when(courseService.create(42L, "Java 并发课")).thenReturn(course(CourseStatus.RECORDING));
+        when(courseService.create(42L, "Java 并发课", null)).thenReturn(course(CourseStatus.RECORDING));
         when(courseService.list(42L)).thenReturn(List.of(course(CourseStatus.RECORDING)));
 
         mockMvc.perform(post("/api/courses")
@@ -203,6 +204,18 @@ class CourseControllerTest {
     }
 
     @Test
+    void renamesAnOwnedCourse() throws Exception {
+        when(courseService.rename(42L, 9L, "新笔记名称")).thenReturn("新笔记名称");
+
+        mockMvc.perform(put("/api/courses/9/title")
+                        .with(authentication(principalAuthentication()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"新笔记名称\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("新笔记名称"));
+    }
+
+    @Test
     void retriesAFailedCourse() throws Exception {
         when(courseService.get(42L, 9L)).thenReturn(course(CourseStatus.FAILED));
         when(recordingService.retry(42L, 9L)).thenReturn(course(CourseStatus.PROCESSING));
@@ -211,6 +224,19 @@ class CourseControllerTest {
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("PROCESSING"));
         verify(processingService).processAsync(42L, 9L);
+    }
+
+    @Test
+    void returnsOnlyLightweightProcessingStatusForPolling() throws Exception {
+        when(courseService.progress(42L, 9L))
+                .thenReturn(new CourseProgress(CourseStatus.PROCESSING, 65, null));
+
+        mockMvc.perform(get("/api/courses/9/status").with(authentication(principalAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PROCESSING"))
+                .andExpect(jsonPath("$.processingProgress").value(65))
+                .andExpect(jsonPath("$.transcript").doesNotExist())
+                .andExpect(jsonPath("$.noteContent").doesNotExist());
     }
 
     @Test

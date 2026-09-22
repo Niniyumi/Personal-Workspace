@@ -12,7 +12,7 @@ vi.mock('../auth/authApi', () => ({
 
 vi.mock('./courseApi', () => ({
   courseApi: { list: vi.fn(), uploadPart: vi.fn(), createImport: vi.fn(), importOffset: vi.fn(),
-    uploadImportChunk: vi.fn(), completeImport: vi.fn() },
+    uploadImportChunk: vi.fn(), completeImport: vi.fn(), get: vi.fn(), getStatus: vi.fn(), rename: vi.fn() },
 }))
 
 describe('courseStore', () => {
@@ -58,7 +58,7 @@ describe('courseStore', () => {
     const result = await useCourseStore().uploadAudio('网络课', file, value => progress.push(value))
 
     expect(result.status).toBe('PROCESSING')
-    expect(courseApi.createImport).toHaveBeenCalledWith('access', '网络课', file.size, fileName)
+    expect(courseApi.createImport).toHaveBeenCalledWith('access', '网络课', file.size, fileName, undefined)
     expect(vi.mocked(courseApi.uploadImportChunk).mock.calls.map(call => call[2])).toEqual([0, 8 * 1024 * 1024])
     expect(progress.at(-1)).toBe(100)
     expect(courseApi.completeImport).toHaveBeenCalledOnce()
@@ -107,5 +107,43 @@ describe('courseStore', () => {
       method: 'GET', url: '/courses', status: 404, code: 'NOT_FOUND', traceId: 'course-trace',
     })
     consoleError.mockRestore()
+  })
+
+  it('merges lightweight progress without clearing the loaded transcript', async () => {
+    useAuthStore().tokens = { accessToken: 'access', refreshToken: 'refresh', expiresInSeconds: 900 }
+    const course = {
+      id: 9, title: '网络课', status: 'PROCESSING' as const, durationSeconds: 300,
+      processingProgress: 10, transcript: '已完成的转写', noteContent: null, noteCandidate: null,
+      errorMessage: null, sourceType: 'IMPORT' as const, createdAt: '', updatedAt: '',
+    }
+    vi.mocked(courseApi.get).mockResolvedValue(course)
+    vi.mocked(courseApi.getStatus).mockResolvedValue({
+      status: 'PROCESSING', processingProgress: 65, errorMessage: null,
+    })
+
+    const store = useCourseStore()
+    await store.loadOne(9)
+    await store.refreshStatus(9)
+    expect(store.current).toMatchObject({ transcript: '已完成的转写', processingProgress: 65 })
+  })
+
+  it('updates the current course and its list item after renaming', async () => {
+    useAuthStore().tokens = { accessToken: 'access', refreshToken: 'refresh', expiresInSeconds: 900 }
+    const course = {
+      id: 9, title: '原课程名', status: 'READY' as const, durationSeconds: 300,
+      processingProgress: 100, transcript: '转写', noteContent: '笔记', noteCandidate: null,
+      errorMessage: null, sourceType: 'IMPORT' as const, createdAt: '', updatedAt: '',
+    }
+    vi.mocked(courseApi.get).mockResolvedValue(course)
+    vi.mocked(courseApi.list).mockResolvedValue([course])
+    vi.mocked(courseApi.rename).mockResolvedValue({ title: '新笔记名称' })
+    const store = useCourseStore()
+    await Promise.all([store.loadOne(9), store.loadAll()])
+
+    await store.rename(9, '新笔记名称')
+
+    expect(store.current?.title).toBe('新笔记名称')
+    expect(store.current?.transcript).toBe('转写')
+    expect(store.courses[0]?.title).toBe('新笔记名称')
   })
 })

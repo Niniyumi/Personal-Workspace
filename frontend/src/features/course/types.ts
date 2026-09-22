@@ -3,6 +3,8 @@ export type CourseStatus = 'UPLOADING' | 'RECORDING' | 'PROCESSING' | 'TRANSCRIB
 export interface Course {
   id: number
   title: string
+  courseName?: string
+  lessonDate?: string
   status: CourseStatus
   durationSeconds: number
   processingProgress: number
@@ -16,7 +18,7 @@ export interface Course {
 }
 
 export type CourseSummary = Pick<Course,
-  'id' | 'title' | 'status' | 'durationSeconds' | 'processingProgress' | 'errorMessage' | 'createdAt' | 'updatedAt'>
+  'id' | 'title' | 'courseName' | 'lessonDate' | 'status' | 'durationSeconds' | 'processingProgress' | 'errorMessage' | 'createdAt' | 'updatedAt'>
 
 export interface CourseAudioPart {
   id: number
@@ -24,3 +26,5 @@ export interface CourseAudioPart {
   durationSeconds: number
   fileSize: number
 }
+
+export type CourseProgress = Pick<Course, 'status' | 'processingProgress' | 'errorMessage'>

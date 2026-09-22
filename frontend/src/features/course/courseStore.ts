@@ -52,15 +52,14 @@ export const useCourseStore = defineStore('course', () => {
 
   async function loadOne(courseId: number) {
     const requestGeneration = generation
-    current.value = null
     const loaded = await request((token) => courseApi.get(token, courseId))
     if (requestGeneration === generation) current.value = loaded
     return loaded
   }
 
-  async function create(title: string) {
+  async function create(title: string, lessonDate?: string) {
     const requestGeneration = generation
-    const course = await request((token) => courseApi.create(token, title))
+    const course = await request((token) => courseApi.create(token, title, lessonDate))
     if (requestGeneration === generation) {
       current.value = course
       courses.value = [course, ...courses.value]
@@ -79,17 +78,17 @@ export const useCourseStore = defineStore('course', () => {
     return course
   }
 
-  async function uploadAudio(title: string, file: File, onProgress: (percent: number) => void) {
+  async function uploadAudio(title: string, file: File, onProgress: (percent: number) => void, lessonDate?: string) {
     if (!title.trim() || !/\.(m4a|mp3|wav)$/i.test(file.name)
         || file.size < 1 || file.size > 512 * 1024 * 1024) {
       error.value = '请选择不超过 512 MB 的 M4A、MP3 或 WAV 文件，并填写课程名称'
       throw new Error(error.value)
     }
     const auth = useAuthStore()
-    const key = `course-import:${auth.user?.id ?? 'user'}:${file.name}:${file.size}`
+    const key = `course-import:${auth.user?.id ?? 'user'}:${title.trim()}:${lessonDate ?? ''}:${file.name}:${file.size}`
     const remembered = Number(localStorage.getItem(key))
     const created = remembered > 0 ? null
-      : await request(token => courseApi.createImport(token, title, file.size, file.name))
+      : await request(token => courseApi.createImport(token, title, file.size, file.name, lessonDate))
     const courseId = created?.id ?? remembered
     if (created) localStorage.setItem(key, String(courseId))
     let offset = await request(token => courseApi.importOffset(token, courseId))
@@ -118,6 +117,25 @@ export const useCourseStore = defineStore('course', () => {
     const loaded = await request((token) => courseApi.listParts(token, courseId))
     parts.value = loaded
     return loaded
+  }
+
+  async function refreshStatus(courseId: number) {
+    const requestGeneration = generation
+    const progress = await request(token => courseApi.getStatus(token, courseId))
+    if (requestGeneration === generation && current.value?.id === courseId) {
+      current.value = { ...current.value, ...progress }
+    }
+    return progress
+  }
+
+  async function rename(courseId: number, title: string) {
+    const requestGeneration = generation
+    const renamed = await request(token => courseApi.rename(token, courseId, title.trim()))
+    if (requestGeneration === generation) {
+      if (current.value?.id === courseId) current.value = { ...current.value, title: renamed.title }
+      courses.value = courses.value.map(item => item.id === courseId ? { ...item, title: renamed.title } : item)
+    }
+    return renamed
   }
 
   async function loadAudioPart(courseId: number, partNumber: number) {
@@ -164,7 +182,7 @@ export const useCourseStore = defineStore('course', () => {
   }
 
   return {
-    courses, current, parts, loading, error, reset, loadAll, loadOne, get: loadOne,
+    courses, current, parts, loading, error, reset, loadAll, loadOne, refreshStatus, rename, get: loadOne,
     create, uploadAudio, uploadPart, complete, generateNote, loadParts, loadAudioPart, loadOriginalAudio,
     retry, saveNote, resolveNoteCandidate, downloadNote,
   }

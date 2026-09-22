@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReport;
 import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReportRepository;
+import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReportPage;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -60,6 +61,26 @@ public class MybatisWeeklyReportRepository implements WeeklyReportRepository {
                 .stream()
                 .map(WeeklyReportRow::toDomain)
                 .toList();
+    }
+
+    @Override
+    public WeeklyReportPage search(long userId, LocalDate startDate, LocalDate endDate,
+            String keyword, int page) {
+        LambdaQueryWrapper<WeeklyReportRow> query = new LambdaQueryWrapper<WeeklyReportRow>()
+                .eq(WeeklyReportRow::getUserId, userId)
+                .between(WeeklyReportRow::getWeekStartDate, startDate, endDate);
+        if (keyword != null && !keyword.isBlank()) {
+            String value = keyword.trim();
+            query.and(content -> content.like(WeeklyReportRow::getCoreWork, value)
+                    .or().like(WeeklyReportRow::getProblems, value)
+                    .or().like(WeeklyReportRow::getNextWeekPlan, value));
+        }
+        long total = mapper.selectCount(query);
+        long offset = (long) (page - 1) * 10;
+        List<WeeklyReport> items = mapper.selectList(query.orderByDesc(WeeklyReportRow::getWeekStartDate)
+                        .last("LIMIT 10 OFFSET " + offset))
+                .stream().map(WeeklyReportRow::toDomain).toList();
+        return new WeeklyReportPage(items, total, page);
     }
 
     @Override

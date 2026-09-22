@@ -56,9 +56,13 @@ class WeeklyReportAiServiceTest {
 
     @Test
     void generatesAValidatedWorkSummary() {
-        ChatProvider provider = (system, user) -> """
-                {"coreContent":"关键项目交付","routineWork":"日常维护","selfScore":88}
-                """;
+        ChatProvider provider = (system, user) -> {
+            assertThat(system).contains("不编造", "背景或目标", "日常维护");
+            assertThat(user).contains("完成登录");
+            return """
+                    {"coreContent":"关键项目交付","routineWork":"日常维护","selfScore":88}
+                    """;
+        };
         WeeklyReportAiService service = new WeeklyReportAiService(provider, new ObjectMapper());
 
         GeneratedWorkSummary result = service.generateSummary(List.of(report()));

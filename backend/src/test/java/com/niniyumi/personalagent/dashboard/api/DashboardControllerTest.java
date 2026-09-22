@@ -31,7 +31,7 @@ class DashboardControllerTest {
     @Test
     void returnsOnlyTheAuthenticatedUsersDashboard() throws Exception {
         DashboardSnapshot snapshot = new DashboardSnapshot(
-                4, 2, 900, 1, 1, 600, List.of(), List.of());
+                4, 2, 900, 1, 1, 600, List.of(), List.of(), List.of());
         when(dashboardService.get(42L)).thenReturn(snapshot);
 
         mockMvc.perform(get("/api/dashboard").with(authentication(new UsernamePasswordAuthenticationToken(

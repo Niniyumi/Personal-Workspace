@@ -7,6 +7,8 @@ import java.time.Instant;
 public record CourseSummaryResponse(
         long id,
         String title,
+        String courseName,
+        java.time.LocalDate lessonDate,
         CourseStatus status,
         int durationSeconds,
         int processingProgress,
@@ -16,7 +18,7 @@ public record CourseSummaryResponse(
         Instant updatedAt) {
     public static CourseSummaryResponse from(Course course) {
         return new CourseSummaryResponse(
-                course.id(), course.title(), course.status(), course.durationSeconds(),
+                course.id(), course.title(), course.courseName(), course.lessonDate(), course.status(), course.durationSeconds(),
                 course.processingProgress(), course.errorMessage(), course.sourceType(),
                 course.createdAt(), course.updatedAt());
     }

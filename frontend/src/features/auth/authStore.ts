@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { authApi } from './authApi'
 import { tokenStorage } from './tokenStorage'
+import { sessionActivity } from './sessionActivity'
 import type { AuthTokens, LoginInput, RegisterInput, User } from './types'
 
 export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'anonymous'
@@ -73,6 +74,7 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     clearSession(): void {
       tokenStorage.clear()
+      sessionActivity.clear()
       this.tokens = null
       this.user = null
       this.status = 'anonymous'
@@ -84,7 +86,21 @@ export const useAuthStore = defineStore('auth', {
       this.sessionExpired = true
     },
 
+    expireInactiveSession(): void {
+      const refreshToken = this.tokens?.refreshToken
+      this.expireSession()
+      if (refreshToken) {
+        void authApi.logout(refreshToken).catch(() => {
+          // 本地退出立即生效；服务端注销失败不能阻止跳转登录页。
+        })
+      }
+    },
+
     async refreshAccessToken(): Promise<string> {
+      if (sessionActivity.isInactive()) {
+        this.expireInactiveSession()
+        throw new Error('登录状态已失效')
+      }
       if (refreshPromise !== null) return refreshPromise
       const refreshToken = this.tokens?.refreshToken
       if (!refreshToken) {
@@ -118,6 +134,7 @@ export const useAuthStore = defineStore('auth', {
         this.user = user
         this.status = 'authenticated'
         this.sessionExpired = false
+        sessionActivity.touch()
       } catch (error) {
         logAuthError('login', error)
         this.clearSession()
@@ -158,6 +175,12 @@ export const useAuthStore = defineStore('auth', {
         this.clearSession()
         return
       }
+      if (sessionActivity.isInactive()) {
+        this.tokens = saved
+        this.expireInactiveSession()
+        return
+      }
+      if (sessionActivity.lastAt() === null) sessionActivity.touch()
       this.status = 'loading'
       this.error = null
       this.tokens = saved

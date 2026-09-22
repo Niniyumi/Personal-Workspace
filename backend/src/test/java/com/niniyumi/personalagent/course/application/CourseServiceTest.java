@@ -8,6 +8,7 @@ import com.niniyumi.personalagent.course.domain.CourseRepository;
 import com.niniyumi.personalagent.course.domain.CourseStatus;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +42,44 @@ class CourseServiceTest {
     @Test
     void rejectsABlankCourseTitle() {
         assertThatThrownBy(() -> service.create(42L, "  "))
+                .isInstanceOf(InvalidCourseTitleException.class);
+    }
+
+    @Test
+    void keepsEachLessonIdAndCourseGroupingAfterRenaming() {
+        Course first = service.create(42L, "管理学", LocalDate.of(2026, 9, 1));
+        Course second = service.create(42L, "管理学", LocalDate.of(2026, 9, 8));
+
+        service.rename(42L, first.id(), "管理学第一讲");
+
+        assertThat(first.id()).isNotEqualTo(second.id());
+        assertThat(service.get(42L, first.id()).title()).isEqualTo("管理学第一讲");
+        assertThat(service.get(42L, first.id()).courseName()).isEqualTo("管理学");
+        assertThat(service.get(42L, first.id()).lessonDate()).isEqualTo(LocalDate.of(2026, 9, 1));
+        assertThat(service.get(42L, second.id()).lessonDate()).isEqualTo(LocalDate.of(2026, 9, 8));
+    }
+
+    @Test
+    void renamesAnOwnedCourseWithoutChangingItsContent() {
+        Course created = service.create(42L, "原课程名");
+        repository.update(new Course(
+                created.id(), created.userId(), created.title(), CourseStatus.READY, 80,
+                100, "完整转写", "课程笔记", null, created.createdAt(), created.updatedAt()));
+
+        String renamed = service.rename(42L, created.id(), "  新笔记名称  ");
+        Course stored = repository.findByIdAndUserId(created.id(), 42L).orElseThrow();
+
+        assertThat(renamed).isEqualTo("新笔记名称");
+        assertThat(stored.title()).isEqualTo("新笔记名称");
+        assertThat(stored.transcript()).isEqualTo("完整转写");
+        assertThat(stored.noteContent()).isEqualTo("课程笔记");
+    }
+
+    @Test
+    void rejectsABlankRenamedTitle() {
+        Course created = service.create(42L, "原课程名");
+
+        assertThatThrownBy(() -> service.rename(42L, created.id(), "  "))
                 .isInstanceOf(InvalidCourseTitleException.class);
     }
 
@@ -137,7 +176,7 @@ class CourseServiceTest {
                     (long) courses.size() + 1,
                     course.userId(), course.title(), course.status(), course.durationSeconds(),
                     course.processingProgress(), course.transcript(), course.noteContent(), course.errorMessage(),
-                    course.createdAt(), course.updatedAt());
+                    course.createdAt(), course.updatedAt()).withLesson(course.courseName(), course.lessonDate());
             courses.add(saved);
             return saved;
         }

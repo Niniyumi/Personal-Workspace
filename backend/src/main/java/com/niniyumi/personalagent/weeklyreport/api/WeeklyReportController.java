@@ -3,6 +3,7 @@ package com.niniyumi.personalagent.weeklyreport.api;
 import com.niniyumi.personalagent.auth.infrastructure.security.AuthenticatedUser;
 import com.niniyumi.personalagent.weeklyreport.api.dto.WeeklyReportRequest;
 import com.niniyumi.personalagent.weeklyreport.api.dto.WeeklyReportResponse;
+import com.niniyumi.personalagent.weeklyreport.api.dto.WeeklyReportSearchResponse;
 import com.niniyumi.personalagent.weeklyreport.api.dto.DocxImportResponse;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAiService;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportService;
@@ -48,6 +49,7 @@ public class WeeklyReportController {
         this.dateResolver = dateResolver;
     }
 
+    /** 创建指定自然周的周报。 */
     @PostMapping
     public ResponseEntity<WeeklyReportResponse> create(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -56,6 +58,7 @@ public class WeeklyReportController {
                 .body(WeeklyReportResponse.from(service.create(user.userId(), request.toCommand())));
     }
 
+    /** 按年份和月份查询当前用户的周报列表。 */
     @GetMapping
     public List<WeeklyReportResponse> list(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -66,6 +69,7 @@ public class WeeklyReportController {
                 .toList();
     }
 
+    /** 查询指定周报的完整内容。 */
     @GetMapping("/{reportId}")
     public WeeklyReportResponse get(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -73,6 +77,7 @@ public class WeeklyReportController {
         return WeeklyReportResponse.from(service.get(user.userId(), reportId));
     }
 
+    /** 修改指定周报的日期和工作内容。 */
     @PutMapping("/{reportId}")
     public WeeklyReportResponse update(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -81,6 +86,7 @@ public class WeeklyReportController {
         return WeeklyReportResponse.from(service.update(user.userId(), reportId, request.toCommand()));
     }
 
+    /** 从 DOCX 中提取文字、识别周日期并生成可编辑的周报预览。 */
     @PostMapping(value = "/import-docx", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public DocxImportResponse importDocx(
             @RequestPart("file") MultipartFile file,
@@ -107,5 +113,15 @@ public class WeeklyReportController {
                     exception.getClass().getSimpleName());
             throw exception;
         }
+    }
+
+    /** 按所属周筛选，并按内容检索当前用户的周报。 */
+    @GetMapping("/search")
+    public WeeklyReportSearchResponse search(@AuthenticationPrincipal AuthenticatedUser user,
+            @RequestParam int year,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false, defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "1") int page) {
+        return WeeklyReportSearchResponse.from(service.search(user.userId(), year, month, keyword, page));
     }
 }

@@ -15,6 +15,8 @@ public class CourseRow {
     private Long id;
     private Long userId;
     private String title;
+    private String courseName;
+    private java.time.LocalDate lessonDate;
     private CourseStatus status;
     private Integer durationSeconds;
     private Integer processingProgress;
@@ -39,6 +41,8 @@ public class CourseRow {
         row.id = course.id();
         row.userId = course.userId();
         row.title = course.title();
+        row.courseName = course.courseName();
+        row.lessonDate = course.lessonDate();
         row.status = course.status();
         row.durationSeconds = course.durationSeconds();
         row.processingProgress = course.processingProgress();
@@ -56,12 +60,17 @@ public class CourseRow {
 
     Course toDomain() {
         return new Course(id, userId, title, status, durationSeconds, processingProgress, transcript, noteContent,
-                errorMessage, sourceType, originalAudioPath, expectedBytes, noteCandidate, createdAt, updatedAt);
+                errorMessage, sourceType, originalAudioPath, expectedBytes, noteCandidate, createdAt, updatedAt,
+                courseName, lessonDate);
     }
 
     public Long getId() { return id; }
     public Long getUserId() { return userId; }
     public String getTitle() { return title; }
+    public String getCourseName() { return courseName; }
+    public java.time.LocalDate getLessonDate() { return lessonDate; }
+    public void setCourseName(String courseName) { this.courseName = courseName; }
+    public void setLessonDate(java.time.LocalDate lessonDate) { this.lessonDate = lessonDate; }
     public CourseStatus getStatus() { return status; }
     public Integer getDurationSeconds() { return durationSeconds; }
     public Integer getProcessingProgress() { return processingProgress; }

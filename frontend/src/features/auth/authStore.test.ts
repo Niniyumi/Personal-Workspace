@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { authApi } from './authApi'
 import { useAuthStore } from './authStore'
 import { tokenStorage } from './tokenStorage'
@@ -33,7 +33,11 @@ describe('authStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    localStorage.clear()
+    sessionStorage.clear()
   })
+
+  afterEach(() => vi.useRealTimers())
 
   it('logs in, persists tokens, and loads the current user', async () => {
     vi.mocked(authApi.login).mockResolvedValue(tokens)
@@ -102,6 +106,42 @@ describe('authStore', () => {
     expect(tokenStorage.read()).toBeNull()
     expect(store.status).toBe('anonymous')
     expect(store.sessionExpired).toBe(true)
+  })
+
+  it('expires a stored session after fifteen minutes of inactivity before restoring it', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-22T10:00:00Z'))
+    vi.mocked(authApi.login).mockResolvedValue(tokens)
+    vi.mocked(authApi.currentUser).mockResolvedValue(user)
+    vi.mocked(authApi.logout).mockResolvedValue(undefined)
+    await useAuthStore().login({ login: 'nini', password: 'UnitTest7!' })
+
+    vi.setSystemTime(new Date('2026-09-22T10:15:01Z'))
+    setActivePinia(createPinia())
+    vi.mocked(authApi.currentUser).mockClear()
+    const restored = useAuthStore()
+    await restored.restoreSession()
+
+    expect(restored.status).toBe('anonymous')
+    expect(restored.sessionExpired).toBe(true)
+    expect(tokenStorage.read()).toBeNull()
+    expect(authApi.currentUser).not.toHaveBeenCalled()
+  })
+
+  it('does not refresh an inactive session after fifteen minutes', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-22T10:00:00Z'))
+    vi.mocked(authApi.login).mockResolvedValue(tokens)
+    vi.mocked(authApi.currentUser).mockResolvedValue(user)
+    vi.mocked(authApi.logout).mockResolvedValue(undefined)
+    const store = useAuthStore()
+    await store.login({ login: 'nini', password: 'UnitTest7!' })
+
+    vi.setSystemTime(new Date('2026-09-22T10:15:01Z'))
+    await expect(store.refreshAccessToken()).rejects.toThrow('登录状态已失效')
+
+    expect(store.sessionExpired).toBe(true)
+    expect(authApi.refresh).not.toHaveBeenCalled()
   })
 
   it('marks the session expired when an api refresh is rejected', async () => {

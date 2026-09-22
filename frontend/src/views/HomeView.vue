@@ -4,6 +4,7 @@ import { ElAvatar, ElButton, ElIcon } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ActivityChart from '../components/ActivityChart.vue'
+import YearlyWeeklyReportChart from '../components/YearlyWeeklyReportChart.vue'
 import { useAuthStore } from '../features/auth/authStore'
 import { useDashboardStore } from '../features/dashboard/dashboardStore'
 
@@ -33,6 +34,7 @@ async function logout() {
 }
 
 const openWeeklyReports = () => router.push({ name: 'weekly-reports' })
+const openWeeklyHistory = () => router.push({ name: 'weekly-report-history' })
 const openWorkSummaries = () => router.push({ name: 'work-summaries' })
 const openCourses = () => router.push({ name: 'courses' })
 </script>
@@ -49,7 +51,7 @@ const openCourses = () => router.push({ name: 'courses' })
           <RouterLink class="nav" :to="{ name: 'work-summaries' }"><ElIcon><FolderOpened /></ElIcon><span>工作总结</span></RouterLink>
         </nav>
         <div class="profile">
-          <ElAvatar :size="40" :icon="UserFilled" aria-label="默认用户头像" />
+          <ElAvatar :size="72" :icon="UserFilled" :style="{ '--el-avatar-icon-size': '30px' }" aria-label="默认用户头像" />
           <div><strong>{{ auth.user?.displayName }}</strong><span>{{ auth.user?.email }}</span></div>
         </div>
       </aside>
@@ -84,9 +86,11 @@ const openCourses = () => router.push({ name: 'courses' })
           <article class="feature card">
             <div class="icon orange-bg"><ElIcon><Document /></ElIcon></div>
             <span class="eyebrow">周报</span><h2>{{ dashboard.data?.totalWeeklyReports ?? 0 }} 份周报</h2>
-            <p>记录工作进展，按季度或年度汇总。</p>
+            <p>近三年整理情况</p>
+            <YearlyWeeklyReportChart :points="dashboard.data?.yearlyWeeklyReports ?? []" />
             <div class="actions">
               <ElButton class="standard-action-button" data-test="open-weekly-reports" round @click="openWeeklyReports">写周报</ElButton>
+              <ElButton class="standard-action-button" data-test="open-weekly-history" round @click="openWeeklyHistory">查看周报</ElButton>
               <ElButton class="standard-action-button" data-test="open-work-summaries" round @click="openWorkSummaries">查看总结</ElButton>
             </div>
           </article>

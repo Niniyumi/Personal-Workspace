@@ -119,7 +119,7 @@ public class CourseRecordingService {
         Course completed = courses.update(new Course(
                 course.id(), course.userId(), course.title(), CourseStatus.PROCESSING, total,
                 10, null, null, null, course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
-                course.createdAt(), clock.instant()));
+                course.createdAt(), clock.instant()).withLesson(course.courseName(), course.lessonDate()));
         log.info("课程录音接收完成, userId={}, courseId={}, parts={}, durationSeconds={}, fileBytes={}, storagePaths={}",
                 userId, courseId, uploaded.size(), total, totalBytes, storagePaths);
         return completed;
@@ -134,6 +134,6 @@ public class CourseRecordingService {
                 course.id(), course.userId(), course.title(), CourseStatus.PROCESSING,
                 course.durationSeconds(), 10, course.transcript(), null, null,
                 course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
-                course.createdAt(), clock.instant()));
+                course.createdAt(), clock.instant()).withLesson(course.courseName(), course.lessonDate()));
     }
 }

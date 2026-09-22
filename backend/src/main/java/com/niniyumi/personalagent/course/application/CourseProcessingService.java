@@ -65,7 +65,7 @@ public class CourseProcessingService {
             long totalBytes = audioParts.stream().mapToLong(CourseAudioPart::fileSize).sum();
             log.info("开始课程录音转写, userId={}, courseId={}, parts={}, durationSeconds={}, fileBytes={}",
                     userId, courseId, audioParts.size(), course.durationSeconds(), totalBytes);
-            courses.update(withProgress(course, progress));
+            courses.updateProgress(withProgress(course, progress));
             if (audioParts.isEmpty()) throw new InvalidCoursePartsException();
             List<String> transcripts = new ArrayList<>();
             for (int index = 0; index < audioParts.size(); index++) {
@@ -83,14 +83,14 @@ public class CourseProcessingService {
                 }
                 transcripts.add(text);
                 progress = 10 + Math.round(65F * (index + 1) / audioParts.size());
-                courses.update(withProgress(course, progress, String.join("\n\n", transcripts)));
+                courses.updateProgress(withProgress(course, progress));
             }
             String transcript = String.join("\n\n", transcripts);
             courses.update(new Course(
                     course.id(), course.userId(), course.title(), CourseStatus.TRANSCRIBED,
                     course.durationSeconds(), 100, transcript, null, null,
                     course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
-                    null, course.createdAt(), clock.instant()));
+                    null, course.createdAt(), clock.instant()).withLesson(course.courseName(), course.lessonDate()));
             log.info("课程录音转写完成, userId={}, courseId={}, parts={}, durationSeconds={}, fileBytes={}, transcriptChars={}, storagePath={}",
                     userId, courseId, audioParts.size(), course.durationSeconds(), totalBytes,
                     transcript.length(), course.originalAudioPath());
@@ -102,7 +102,7 @@ public class CourseProcessingService {
                     course.id(), course.userId(), course.title(), CourseStatus.FAILED,
                     course.durationSeconds(), progress, partialTranscript(audioParts), null, processingErrorMessage(exception),
                     course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
-                    null, course.createdAt(), clock.instant()));
+                    null, course.createdAt(), clock.instant()).withLesson(course.courseName(), course.lessonDate()));
             return;
         }
 
@@ -131,7 +131,8 @@ public class CourseProcessingService {
                     course.durationSeconds(), 100, transcript,
                     regeneration ? course.noteContent() : note, null,
                     course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
-                    regeneration ? note : null, course.createdAt(), clock.instant()));
+                    regeneration ? note : null, course.createdAt(), clock.instant())
+                    .withLesson(course.courseName(), course.lessonDate()));
             log.info("课程笔记生成完成, userId={}, courseId={}, transcriptChars={}, noteChars={}",
                     userId, courseId, transcript.length(), note.length());
         } catch (RuntimeException exception) {
@@ -143,7 +144,8 @@ public class CourseProcessingService {
                     regeneration ? CourseStatus.READY : CourseStatus.TRANSCRIBED,
                     course.durationSeconds(), 100, transcriptSanitizer.clean(course.transcript()), course.noteContent(),
                     noteErrorMessage(exception), course.sourceType(), course.originalAudioPath(),
-                    course.expectedBytes(), null, course.createdAt(), clock.instant()));
+                    course.expectedBytes(), null, course.createdAt(), clock.instant())
+                    .withLesson(course.courseName(), course.lessonDate()));
         }
     }
 
@@ -155,7 +157,8 @@ public class CourseProcessingService {
         return new Course(course.id(), course.userId(), course.title(), CourseStatus.PROCESSING,
                 course.durationSeconds(), progress, transcript, course.noteContent(), null,
                 course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
-                course.noteCandidate(), course.createdAt(), clock.instant());
+                course.noteCandidate(), course.createdAt(), clock.instant())
+                .withLesson(course.courseName(), course.lessonDate());
     }
 
     private String partialTranscript(List<CourseAudioPart> audioParts) {

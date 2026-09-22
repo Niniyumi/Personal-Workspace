@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { tokenStorage } from './tokenStorage'
 
 describe('tokenStorage', () => {
-  it('round-trips access and refresh tokens under one key', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+
+  it('keeps login tokens for page reloads but not in persistent storage', () => {
     const tokens = {
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
@@ -12,11 +17,29 @@ describe('tokenStorage', () => {
     tokenStorage.write(tokens)
 
     expect(tokenStorage.read()).toEqual(tokens)
-    expect(localStorage.length).toBe(1)
+    expect(sessionStorage.length).toBe(1)
+    expect(localStorage.length).toBe(0)
   })
 
   it('clears malformed stored data instead of throwing', () => {
-    localStorage.setItem('personal-agent.auth.v1', '{invalid json')
+    sessionStorage.setItem('personal-agent.auth.v1', '{invalid json')
+
+    expect(tokenStorage.read()).toBeNull()
+    expect(sessionStorage.getItem('personal-agent.auth.v1')).toBeNull()
+  })
+
+  it('requires login after the browser session ends', () => {
+    tokenStorage.write({ accessToken: 'access', refreshToken: 'refresh', expiresInSeconds: 900 })
+
+    sessionStorage.clear()
+
+    expect(tokenStorage.read()).toBeNull()
+  })
+
+  it('does not restore an old persistent login from a previous version', () => {
+    localStorage.setItem('personal-agent.auth.v1', JSON.stringify({
+      accessToken: 'old-access', refreshToken: 'old-refresh', expiresInSeconds: 900,
+    }))
 
     expect(tokenStorage.read()).toBeNull()
     expect(localStorage.getItem('personal-agent.auth.v1')).toBeNull()

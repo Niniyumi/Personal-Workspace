@@ -33,6 +33,7 @@ public class WorkSummaryController {
         this.service = service;
     }
 
+    /** 汇总指定年份或季度的周报并生成工作总结。 */
     @PostMapping("/generate")
     public WorkSummaryResponse generate(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -44,6 +45,7 @@ public class WorkSummaryController {
                 service.generateQuarter(user.userId(), request.year(), request.quarter()));
     }
 
+    /** 查询指定年份或季度已经生成的工作总结。 */
     @GetMapping
     public WorkSummaryResponse get(
             @AuthenticationPrincipal AuthenticatedUser user,
@@ -55,6 +57,7 @@ public class WorkSummaryController {
                 service.get(user.userId(), periodType, range.start(), range.end()));
     }
 
+    /** 保存用户修改后的工作总结内容和自评分。 */
     @PutMapping("/{summaryId}")
     public WorkSummaryResponse update(
             @AuthenticationPrincipal AuthenticatedUser user,

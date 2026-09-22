@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   downloadNote: vi.fn(),
   generateNote: vi.fn(),
   resolveNoteCandidate: vi.fn(),
+  rename: vi.fn(),
   loadParts: vi.fn(),
   loadAudioPart: vi.fn(),
   loadOriginalAudio: vi.fn(),
@@ -22,6 +23,7 @@ const mocks = vi.hoisted(() => ({
     downloadNote: vi.fn(),
     generateNote: vi.fn(),
     resolveNoteCandidate: vi.fn(),
+    rename: vi.fn(),
     loadParts: vi.fn(),
     loadAudioPart: vi.fn(),
     loadOriginalAudio: vi.fn(),
@@ -44,6 +46,7 @@ beforeEach(() => {
   mocks.store.downloadNote = mocks.downloadNote
   mocks.store.generateNote = mocks.generateNote
   mocks.store.resolveNoteCandidate = mocks.resolveNoteCandidate
+  mocks.store.rename = mocks.rename
   mocks.store.loadParts = mocks.loadParts
   mocks.store.loadAudioPart = mocks.loadAudioPart
   mocks.store.loadOriginalAudio = mocks.loadOriginalAudio
@@ -63,6 +66,7 @@ beforeEach(() => {
   mocks.downloadNote.mockResolvedValue(undefined)
   mocks.generateNote.mockResolvedValue(mocks.store.current)
   mocks.resolveNoteCandidate.mockResolvedValue(mocks.store.current)
+  mocks.rename.mockResolvedValue({ title: '新笔记名称' })
   mocks.loadParts.mockResolvedValue(mocks.store.parts)
   mocks.loadAudioPart.mockResolvedValue('blob:audio')
   mocks.loadOriginalAudio.mockResolvedValue('/api/course-audio/ticket')
@@ -136,6 +140,17 @@ describe('CourseDetailView', () => {
     await wrapper.get('[data-test="download-course-note"]').trigger('click')
 
     expect(mocks.downloadNote).toHaveBeenCalledWith(9, 'Java 并发课')
+  })
+
+  it('renames the course note from the detail heading', async () => {
+    const wrapper = mount(CourseDetailView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    await wrapper.get('[data-test="rename-course"]').trigger('click')
+    await wrapper.get('[data-test="course-title-input"]').setValue('新笔记名称')
+    await wrapper.get('[data-test="save-course-title"]').trigger('click')
+
+    expect(mocks.rename).toHaveBeenCalledWith(9, '新笔记名称')
   })
 
   it('lets the user generate notes only after transcription is saved', async () => {

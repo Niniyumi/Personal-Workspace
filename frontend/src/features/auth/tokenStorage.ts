@@ -14,7 +14,8 @@ function isAuthTokens(value: unknown): value is AuthTokens {
 
 export const tokenStorage = {
   read(): AuthTokens | null {
-    const value = localStorage.getItem(STORAGE_KEY)
+    localStorage.removeItem(STORAGE_KEY)
+    const value = sessionStorage.getItem(STORAGE_KEY)
     if (value === null) {
       return null
     }
@@ -26,15 +27,17 @@ export const tokenStorage = {
     } catch {
       // 损坏的本地数据不能阻止应用启动，统一清除并按未登录处理。
     }
-    localStorage.removeItem(STORAGE_KEY)
+    sessionStorage.removeItem(STORAGE_KEY)
     return null
   },
 
   write(tokens: AuthTokens): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens))
+    localStorage.removeItem(STORAGE_KEY)
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tokens))
   },
 
   clear(): void {
+    sessionStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(STORAGE_KEY)
   },
 }

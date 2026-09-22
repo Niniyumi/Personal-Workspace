@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
         { month: '2026-08', weeklyReports: 2, courseNotes: 1 },
         { month: '2026-09', weeklyReports: 2, courseNotes: 1 },
       ],
+      yearlyWeeklyReports: [
+        { year: 2024, count: 1 }, { year: 2025, count: 3 }, { year: 2026, count: 4 },
+      ],
       recentItems: [{ type: 'COURSE', id: 9, title: 'Java', updatedAt: '2026-09-08T04:00:00Z' }],
     },
     loading: false, error: null as string | null, load: vi.fn(),
@@ -50,7 +53,18 @@ describe('HomeView dashboard', () => {
     expect(wrapper.find('input[disabled]').exists()).toBe(false)
     expect(wrapper.get('[data-test="logout"]').classes()).toContain('standard-action-button')
     expect(wrapper.get('[data-test="open-weekly-reports"]').classes()).toContain('standard-action-button')
+    expect(wrapper.text()).toContain('2024 年')
+    expect(wrapper.text()).toContain('2026 年')
+    await wrapper.get('[data-test="open-weekly-history"]').trigger('click')
+    expect(mocks.push).toHaveBeenCalledWith({ name: 'weekly-report-history' })
     expect(wrapper.get('.recent-item').classes()).toContain('interactive-row')
+  })
+
+  it('shows a larger profile avatar in the sidebar', () => {
+    const wrapper = mount(HomeView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    const style = wrapper.get('[aria-label="默认用户头像"]').attributes('style')
+    expect(style).toContain('72px')
+    expect(style).toContain('--el-avatar-icon-size: 30px')
   })
 
   it('shows the dashboard retry as a visible standard action', async () => {

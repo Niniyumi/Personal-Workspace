@@ -87,8 +87,9 @@ describe('WorkSummariesView', () => {
       global: { stubs: { RouterLink: RouterLinkStub } },
     })
 
-    expect(wrapper.text()).toContain('核心内容')
-    expect(wrapper.text()).toContain('日常工作')
+    expect(wrapper.text()).toContain('项目经历素材')
+    expect(wrapper.text()).toContain('日常工作经历素材')
+    expect(wrapper.get('[data-test="summary-character-count"]').text()).toContain('不足 500 字')
     expect(wrapper.text()).toContain('自我评分')
     expect(wrapper.get('[data-test="summary-score"]').attributes()).toMatchObject({ min: '0', max: '100' })
     await wrapper.get('[data-test="summary-core"]').setValue('修改后的核心')

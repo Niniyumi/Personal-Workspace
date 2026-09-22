@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class SpaForwardController {
+    /** 将已知前端页面路由转发到 Vue 单页应用入口。 */
     @GetMapping({"/", "/login", "/register", "/forgot-password", "/weekly-reports", "/weekly-reports/{id}",
             "/work-summaries", "/courses", "/courses/{id}"})
     public String forwardSpaRoutes() {

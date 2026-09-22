@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios'
-import type { Course, CourseAudioPart, CourseSummary } from './types'
+import type { Course, CourseAudioPart, CourseProgress, CourseSummary } from './types'
 
 function bearer(accessToken: string) {
   return { Authorization: `Bearer ${accessToken}` }
@@ -7,8 +7,8 @@ function bearer(accessToken: string) {
 
 export function createCourseApi(client: AxiosInstance) {
   return {
-    async createImport(accessToken: string, title: string, fileSize: number, fileName: string): Promise<Course> {
-      const response = await client.post<Course>('/courses/imports', { title, fileSize, fileName }, {
+    async createImport(accessToken: string, title: string, fileSize: number, fileName: string, lessonDate?: string): Promise<Course> {
+      const response = await client.post<Course>('/courses/imports', { title, fileSize, fileName, ...(lessonDate ? { lessonDate } : {}) }, {
         headers: bearer(accessToken),
       })
       return response.data
@@ -35,8 +35,8 @@ export function createCourseApi(client: AxiosInstance) {
       return response.data
     },
 
-    async create(accessToken: string, title: string): Promise<Course> {
-      const response = await client.post<Course>('/courses', { title }, { headers: bearer(accessToken) })
+    async create(accessToken: string, title: string, lessonDate?: string): Promise<Course> {
+      const response = await client.post<Course>('/courses', { title, ...(lessonDate ? { lessonDate } : {}) }, { headers: bearer(accessToken) })
       return response.data
     },
 
@@ -47,6 +47,13 @@ export function createCourseApi(client: AxiosInstance) {
 
     async get(accessToken: string, courseId: number): Promise<Course> {
       const response = await client.get<Course>(`/courses/${courseId}`, { headers: bearer(accessToken) })
+      return response.data
+    },
+
+    async rename(accessToken: string, courseId: number, title: string): Promise<{ title: string }> {
+      const response = await client.put<{ title: string }>(`/courses/${courseId}/title`, { title }, {
+        headers: bearer(accessToken),
+      })
       return response.data
     },
 
@@ -77,6 +84,13 @@ export function createCourseApi(client: AxiosInstance) {
 
     async generateNote(accessToken: string, courseId: number): Promise<Course> {
       const response = await client.post<Course>(`/courses/${courseId}/note/generate`, undefined, {
+        headers: bearer(accessToken),
+      })
+      return response.data
+    },
+
+    async getStatus(accessToken: string, courseId: number): Promise<CourseProgress> {
+      const response = await client.get<CourseProgress>(`/courses/${courseId}/status`, {
         headers: bearer(accessToken),
       })
       return response.data

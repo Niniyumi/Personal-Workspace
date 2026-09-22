@@ -17,6 +17,7 @@ public class DashboardController {
         this.service = service;
     }
 
+    /** 查询当前用户首页所需的统计数据和最近记录。 */
     @GetMapping
     public DashboardSnapshot get(@AuthenticationPrincipal AuthenticatedUser user) {
         return service.get(user.userId());

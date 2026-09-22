@@ -19,9 +19,14 @@ public class WeeklyReportAiService {
             无法确定分类的内容全部放入 coreWork，coreWork 不得为空。不要输出 Markdown。
             """;
     private static final String SUMMARY_SYSTEM_PROMPT = """
-            你是工作总结助手。请根据用户提供的周报生成 JSON 对象，只包含以下三个字段：
-            coreContent、routineWork、selfScore。前两个字段必须是非空字符串，selfScore 必须是 0 到 100 的整数。
-            核心内容突出成果和重要项目，日常工作归纳重复性维护与协作。不要输出 Markdown。
+            你是工作经历整理助手。只依据用户周报提炼可用于简历的工作经历素材，不编造项目、职责、结果或数字。
+            输出 JSON 对象，且只包含 coreContent、routineWork、selfScore 三个字段。
+            coreContent 和 routineWork 必须是非空字符串，selfScore 是 0 到 100 的整数。
+            coreContent：按项目或重点工作归并多周记录。每项用完整语句说明背景或目标、本人采取的行动、已记录的结果；突出个人贡献，避免按周流水账。
+            routineWork：把日常维护、问题处理和跨团队协作整理成可用于简历的职责与贡献，说明具体做法和已记录的效果。
+            两部分用换行分隔不同事项。周报事实充分时，两部分合计以约 500 字为目标，重点项目比日常工作写得更具体。
+            若原文信息不足，就如实简写；不得为了达到字数重复内容、编造过程或推测结果。
+            没有量化数据时使用准确的定性表述，不推测提升百分比或业务收益。不要输出 Markdown 或 JSON 之外的文字。
             """;
 
     private final ChatProvider provider;

@@ -26,6 +26,7 @@ import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportNotFoundE
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportService;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportDateResolver;
 import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReport;
+import com.niniyumi.personalagent.weeklyreport.domain.WeeklyReportPage;
 import com.niniyumi.personalagent.weeklyreport.application.WeeklyReportAiService;
 import com.niniyumi.personalagent.weeklyreport.infrastructure.document.DocxTextExtractor;
 import java.time.Instant;
@@ -170,6 +171,20 @@ class WeeklyReportControllerTest {
                 .andExpect(jsonPath("$.code").value("INVALID_DOCX"));
         assertThat(output).contains(
                 "周报上传识别失败, batch=1/1, fileName=broken.docx, fileBytes=6, stage=提取文字, exceptionType=InvalidDocxException");
+    }
+
+    @Test
+    void searchesOwnedReportsWithPageMetadata() throws Exception {
+        when(service.search(42L, 2026, null, "登录", 2))
+                .thenReturn(new WeeklyReportPage(List.of(report()), 11, 2));
+
+        mockMvc.perform(get("/api/weekly-reports/search?year=2026&keyword=登录&page=2")
+                        .with(authentication(principalAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(11))
+                .andExpect(jsonPath("$.page").value(2))
+                .andExpect(jsonPath("$.items[0].id").value(9))
+                .andExpect(jsonPath("$.items[0].characterCount").isNumber());
     }
 
     @Test

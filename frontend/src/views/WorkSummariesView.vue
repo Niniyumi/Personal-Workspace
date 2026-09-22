@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { ArrowLeft, MagicStick } from '@element-plus/icons-vue'
 import { ElButton, ElIcon } from 'element-plus'
 import { useWorkSummaryStore } from '../features/workSummary/workSummaryStore'
@@ -13,6 +13,8 @@ const notice = ref('')
 const generating = ref(false)
 const loadingSaved = ref(false)
 const draft = reactive<WorkSummaryInput>({ coreContent: '', routineWork: '', selfScore: 80 })
+const characterCount = computed(() =>
+  (draft.coreContent + draft.routineWork).replace(/\s/g, '').length)
 
 watch(
   () => store.summary,
@@ -79,7 +81,7 @@ async function save() {
         <div>
           <p>工作总结</p>
           <h1>汇总一段时间的周报</h1>
-          <span>选择季度或年度，生成一份可继续修改的总结。</span>
+          <span>根据周报整理可用于简历的工作经历草稿，生成后可继续修改。</span>
         </div>
         <div class="summary-badge"><ElIcon><MagicStick /></ElIcon></div>
       </header>
@@ -129,13 +131,16 @@ async function save() {
           <div><span>总结内容</span><h2>{{ store.summary.periodStart }} — {{ store.summary.periodEnd }}</h2></div>
           <strong>{{ draft.selfScore }}</strong>
         </div>
+        <p class="length-hint" data-test="summary-character-count">
+          当前 {{ characterCount }} 字。{{ characterCount < 500 ? '不足 500 字，可补充有事实依据的项目和成果。' : '已达到约 500 字的参考篇幅。' }}
+        </p>
         <div class="result-grid">
           <label class="result-card core-card">
-            <span>核心成果</span><strong>核心内容</strong>
+            <span>重点项目</span><strong>项目经历素材</strong>
             <textarea v-model="draft.coreContent" data-test="summary-core" rows="8"></textarea>
           </label>
           <label class="result-card">
-            <span>日常事项</span><strong>日常工作</strong>
+            <span>工作职责</span><strong>日常工作经历素材</strong>
             <textarea v-model="draft.routineWork" data-test="summary-routine" rows="8"></textarea>
           </label>
           <label class="score-card">
@@ -184,6 +189,7 @@ async function save() {
 .result-heading span, .result-card > span, .score-card > span { color: #f05a18; font-size: 10px; font-weight: 850; letter-spacing: .13em; }
 .result-heading h2 { margin: 8px 0 0; font-size: 24px; }
 .result-heading > strong { display: grid; width: 74px; height: 74px; place-items: center; border-radius: 50%; background: #ffd84d; font-size: 28px; }
+.length-hint { margin: 12px 0 0; color: #6f6b64; font-size: 13px; }
 .result-grid { display: grid; grid-template-columns: 1fr 1fr 240px; gap: 16px; margin-top: 25px; }
 .result-card, .score-card { display: grid; align-content: start; gap: 9px; padding: 22px; border: 1px solid #e2ddd5; border-radius: 23px; background: #fff; }
 .result-card.core-card { border-top: 5px solid #f05a18; }

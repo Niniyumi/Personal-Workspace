@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios'
-import type { DocxImportResult, WeeklyReport, WeeklyReportInput } from './types'
+import type { DocxImportResult, WeeklyReport, WeeklyReportInput, WeeklyReportSearchResult } from './types'
 
 export interface BatchProgress {
   index: number
@@ -12,6 +12,14 @@ function bearer(accessToken: string) {
 
 export function createWeeklyReportApi(client: AxiosInstance) {
   return {
+    async search(accessToken: string, year: number, month: number, keyword: string, page: number): Promise<WeeklyReportSearchResult> {
+      const response = await client.get<WeeklyReportSearchResult>('/weekly-reports/search', {
+        params: { year, ...(month ? { month } : {}), keyword, page },
+        headers: bearer(accessToken),
+      })
+      return response.data
+    },
+
     async list(accessToken: string, year: number, month: number): Promise<WeeklyReport[]> {
       const response = await client.get<WeeklyReport[]>('/weekly-reports', {
         params: { year, month },

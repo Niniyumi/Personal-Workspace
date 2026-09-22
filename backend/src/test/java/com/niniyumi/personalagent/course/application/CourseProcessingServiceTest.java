@@ -55,6 +55,8 @@ class CourseProcessingServiceTest {
         assertThat(courses.value.noteContent()).isNull();
         assertThat(courses.history).extracting(Course::processingProgress)
                 .containsExactly(10, 43, 75, 100);
+        assertThat(courses.history).extracting(Course::transcript)
+                .containsExactly(null, null, null, "第一部分\n\n第二部分");
         assertThat(noteRequests).isEmpty();
         assertThat(parts.values).hasSize(2);
         assertThat(output).contains(

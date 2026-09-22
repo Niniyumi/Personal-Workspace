@@ -36,6 +36,12 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
         meta: { requiresAuth: true },
       },
       {
+        path: '/weekly-reports/history',
+        name: 'weekly-report-history',
+        component: () => import('../views/WeeklyReportHistoryView.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: '/weekly-reports/:id',
         name: 'weekly-report-detail',
         component: () => import('../views/WeeklyReportDetailView.vue'),

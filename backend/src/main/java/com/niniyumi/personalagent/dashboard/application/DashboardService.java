@@ -41,6 +41,15 @@ public class DashboardService {
             activity.add(new DashboardSnapshot.MonthlyActivity(month.toString(), reportCount, noteCount));
         }
 
+        int currentYear = java.time.Year.now(clock).getValue();
+        List<DashboardSnapshot.YearlyWeeklyReports> yearlyReports = new ArrayList<>();
+        for (int year = currentYear - 2; year <= currentYear; year++) {
+            int selectedYear = year;
+            int count = (int) userReports.stream()
+                    .filter(report -> report.weekStartDate().getYear() == selectedYear).count();
+            yearlyReports.add(new DashboardSnapshot.YearlyWeeklyReports(year, count));
+        }
+
         List<DashboardSnapshot.RecentItem> recent = new ArrayList<>();
         userReports.forEach(report -> recent.add(new DashboardSnapshot.RecentItem(
                 "WEEKLY_REPORT", report.id(), report.weekStartDate() + " 周报", report.updatedAt())));
@@ -58,7 +67,7 @@ public class DashboardService {
 
         return new DashboardSnapshot(
                 userReports.size(), notes.size(), userCourses.stream().mapToInt(Course::durationSeconds).sum(),
-                monthReports, monthNotes, monthSeconds, List.copyOf(activity),
+                monthReports, monthNotes, monthSeconds, List.copyOf(activity), List.copyOf(yearlyReports),
                 List.copyOf(recent.subList(0, Math.min(5, recent.size()))));
     }
 

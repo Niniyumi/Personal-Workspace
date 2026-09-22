@@ -41,8 +41,38 @@ class DashboardServiceTest {
         assertThat(result.monthlyActivity().get(4).month()).isEqualTo("2026-08");
         assertThat(result.monthlyActivity().get(4).weeklyReports()).isEqualTo(1);
         assertThat(result.monthlyActivity().get(5).courseNotes()).isEqualTo(1);
+        assertThat(result.yearlyWeeklyReports()).extracting(DashboardSnapshot.YearlyWeeklyReports::count)
+                .containsExactly(0, 0, 2);
         assertThat(result.recentItems()).extracting(DashboardSnapshot.RecentItem::id)
                 .containsExactly(2L, 3L, 4L, 1L);
+    }
+
+    @Test
+    void keepsExistingNoteCountWhileRegeneratingIt() {
+        Course regenerating = course(3L, CourseStatus.PROCESSING, 600, "已有笔记", "2026-09-08T02:00:00Z");
+        DashboardService service = new DashboardService(
+                new Reports(List.of()), new Courses(List.of(regenerating)),
+                Clock.fixed(NOW, ZoneId.of("Asia/Shanghai")));
+
+        DashboardSnapshot result = service.get(42L);
+
+        assertThat(result.totalCourseNotes()).isEqualTo(1);
+        assertThat(result.monthCourseNotes()).isEqualTo(1);
+    }
+
+    @Test
+    void countsWeeklyReportsInCurrentAndPreviousTwoYears() {
+        DashboardService service = new DashboardService(
+                new Reports(List.of(
+                        report(1L, LocalDate.of(2024, 6, 3), "2024-06-03T04:00:00Z"),
+                        report(2L, LocalDate.of(2025, 7, 7), "2025-07-07T04:00:00Z"),
+                        report(3L, LocalDate.of(2026, 9, 7), "2026-09-08T03:00:00Z"))),
+                new Courses(List.of()), Clock.fixed(NOW, ZoneId.of("Asia/Shanghai")));
+
+        assertThat(service.get(42L).yearlyWeeklyReports())
+                .extracting(DashboardSnapshot.YearlyWeeklyReports::year).containsExactly(2024, 2025, 2026);
+        assertThat(service.get(42L).yearlyWeeklyReports())
+                .extracting(DashboardSnapshot.YearlyWeeklyReports::count).containsExactly(1, 1, 1);
     }
 
     private WeeklyReport report(long id, LocalDate week, String updated) {
@@ -62,6 +92,10 @@ class DashboardServiceTest {
         public Optional<WeeklyReport> findByIdAndUserId(long id, long userId) { return Optional.empty(); }
         public Optional<WeeklyReport> findByUserIdAndWeekStartDate(long userId, LocalDate date) { return Optional.empty(); }
         public List<WeeklyReport> findByUserIdAndWeekStartDateBetween(long userId, LocalDate start, LocalDate end) { return values; }
+        public com.niniyumi.personalagent.weeklyreport.domain.WeeklyReportPage search(
+                long userId, LocalDate start, LocalDate end, String keyword, int page) {
+            return new com.niniyumi.personalagent.weeklyreport.domain.WeeklyReportPage(values, values.size(), page);
+        }
         public List<WeeklyReport> findAllByUserId(long userId) { return values; }
     }
 

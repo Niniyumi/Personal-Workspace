@@ -61,11 +61,12 @@ describe('CoursesView', () => {
     const wrapper = mount(CoursesView, { global: { stubs: { RouterLink: RouterLinkStub } } })
     const file = new File(['audio'], 'lecture.m4a', { type: 'audio/mp4' })
     await wrapper.get('[data-test="course-title"]').setValue('网络课')
+    await wrapper.get('#lesson-date').setValue('2026-09-15')
     const input = wrapper.get('[data-test="audio-file"]')
     Object.defineProperty(input.element, 'files', { value: [file] })
     await input.trigger('change')
     await wrapper.get('[data-test="upload-audio"]').trigger('click')
-    expect(mocks.uploadAudio).toHaveBeenCalledWith('网络课', file, expect.any(Function))
+    expect(mocks.uploadAudio).toHaveBeenCalledWith('网络课', file, expect.any(Function), '2026-09-15')
   })
 
   it('shows why upload cannot start when the course title is empty', async () => {

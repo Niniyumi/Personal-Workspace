@@ -5,13 +5,26 @@ import { ElButton, ElIcon, ElInput, ElTag } from 'element-plus'
 import { useCourseStore } from '../features/course/courseStore'
 import { useCourseRecorder } from '../features/course/useCourseRecorder'
 import { useRouter } from 'vue-router'
-import type { CourseStatus } from '../features/course/types'
+import type { CourseStatus, CourseSummary } from '../features/course/types'
 
 const store = useCourseStore()
 store.reset()
-const recorder = useCourseRecorder(store)
+const lessonDate = ref(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10))
+const recorder = useCourseRecorder({
+  create: (name: string) => store.create(name, lessonDate.value),
+  uploadPart: store.uploadPart,
+  complete: store.complete,
+})
 const router = useRouter()
 const title = ref('')
+const courseGroups = computed(() => {
+  const groups = new Map<string, CourseSummary[]>()
+  for (const course of store.courses) {
+    const name = course.courseName || course.title
+    groups.set(name, [...(groups.get(name) || []), course])
+  }
+  return [...groups.entries()].map(([name, notes]) => ({ name, notes }))
+})
 const selectedAudio = ref<File | null>(null)
 const audioInput = ref<HTMLInputElement | null>(null)
 const importProgress = ref(0)
@@ -88,7 +101,7 @@ async function uploadAudio() {
   importError.value = ''
   try {
     const course = await store.uploadAudio(title.value.trim(), selectedAudio.value,
-      percent => { importProgress.value = percent })
+      percent => { importProgress.value = percent }, lessonDate.value)
     await router.push({ name: 'course-detail', params: { id: course.id } })
   } catch (cause) {
     const code = (cause as { response?: { data?: { code?: string } } })?.response?.data?.code
@@ -132,6 +145,14 @@ function formatDuration(seconds: number) {
             placeholder="例如：Java 并发编程"
             :disabled="recorder.isActive.value || recorderBusy"
           />
+          <div v-if="courseGroups.length" class="existing-courses">
+            <span>已有课程</span>
+            <button v-for="group in courseGroups" :key="group.name" type="button"
+              :disabled="recorder.isActive.value || recorderBusy" @click="title = group.name">{{ group.name }}</button>
+          </div>
+          <label class="field-label date-label" for="lesson-date">上课日期</label>
+          <input id="lesson-date" v-model="lessonDate" class="date-input" type="date"
+            :disabled="recorder.isActive.value || recorderBusy || importBusy" />
 
           <div class="record-display" :class="{ active: recorder.status.value === 'recording' }">
             <span class="record-dot" aria-hidden="true"></span>
@@ -183,17 +204,20 @@ function formatDuration(seconds: number) {
           <div class="history-heading"><span>已保存</span><h2>课程记录</h2></div>
           <div v-if="store.loading" class="empty-state" data-test="course-history-loading" role="status">正在加载课程记录…</div>
           <div v-else-if="store.courses.length" class="course-list">
-            <article v-for="course in store.courses" :key="course.id">
-              <div>
-                <ElTag round :type="course.status === 'FAILED' ? 'danger' : course.status === 'READY' ? 'success' : 'warning'">
-                  {{ statusText[course.status] }}
-                </ElTag>
-                <time>{{ new Date(course.createdAt).toLocaleDateString('zh-CN') }}</time>
-              </div>
-              <h3>{{ course.title }}</h3>
-              <p>{{ formatDuration(course.durationSeconds) }}</p>
-              <RouterLink class="action-link" :to="{ name: 'course-detail', params: { id: course.id } }">查看内容 →</RouterLink>
-            </article>
+            <section v-for="group in courseGroups" :key="group.name" class="course-group">
+              <h3>{{ group.name }} <small>{{ group.notes.length }} 篇</small></h3>
+              <article v-for="course in group.notes" :key="course.id">
+                <div>
+                  <ElTag round :type="course.status === 'FAILED' ? 'danger' : course.status === 'READY' ? 'success' : 'warning'">
+                    {{ statusText[course.status] }}
+                  </ElTag>
+                  <time>{{ course.lessonDate || new Date(course.createdAt).toLocaleDateString('zh-CN') }}</time>
+                </div>
+                <h4>{{ course.title }}</h4>
+                <p>{{ formatDuration(course.durationSeconds) }}</p>
+                <RouterLink class="action-link" :to="{ name: 'course-detail', params: { id: course.id } }">查看内容 →</RouterLink>
+              </article>
+            </section>
           </div>
           <div v-else class="empty-state">还没有课程记录，从左侧开始第一节课。</div>
         </aside>
@@ -215,6 +239,12 @@ function formatDuration(seconds: number) {
 .recorder-card, .history-card { padding: clamp(24px, 3vw, 36px); border-radius: 30px; background: #fff; }
 .card-heading h2, .history-heading h2 { margin: 0 0 26px; font-size: 29px; letter-spacing: -.04em; }
 .field-label { display: block; margin-bottom: 9px; color: #65615b; font-size: 13px; font-weight: 750; }
+.date-label { margin-top: 18px; }
+.date-input { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid #e2ded6; border-radius: 18px; background: #fff; font: inherit; }
+.existing-courses { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.existing-courses span { color: #77736c; font-size: 12px; }
+.existing-courses button { min-height: 34px; padding: 5px 12px; border: 1px solid #e2ded6; border-radius: 17px; background: #f6f3ed; color: #36332f; cursor: pointer; }
+.existing-courses button:hover { border-color: #f05a18; }
 .recorder-card :deep(.el-input__wrapper) { min-height: 50px; border-radius: 18px; box-shadow: 0 0 0 1px #e2ded6 inset; }
 .record-display { display: grid; min-height: 210px; margin-top: 22px; place-items: center; align-content: center; border-radius: 26px; background: #24262d; color: #fff; }
 .record-display strong { margin: 10px 0 4px; font-size: clamp(44px, 7vw, 76px); letter-spacing: -.05em; }
@@ -236,10 +266,12 @@ function formatDuration(seconds: number) {
 .error-notice { margin: 16px 0 0; padding: 12px 15px; border-radius: 15px; color: #9f2d13; background: #fff0e9; font-size: 13px; }
 .history-card { align-self: start; color: #fff; background: #24262d; }
 .course-list { display: grid; gap: 12px; }
+.course-group > h3 { margin: 12px 0; font-size: 17px; }
+.course-group > h3 small { margin-left: 8px; color: #aaaab0; font-size: 12px; font-weight: 500; }
 .course-list article { padding: 18px; border-radius: 20px; background: #30323a; }
 .course-list article > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .course-list time { color: #aaaab0; font-size: 11px; }
-.course-list h3 { margin: 14px 0 7px; font-size: 18px; }
+.course-list h4 { margin: 14px 0 7px; font-size: 18px; }
 .course-list p { margin: 0 0 12px; color: #aaaab0; font-size: 12px; }
 .course-list a { color: #f89a6f; font-size: 14px; font-weight: 750; text-decoration: none; }
 .empty-state { padding: 34px 18px; border: 1px dashed #4b4d55; border-radius: 20px; color: #aaaab0; font-size: 13px; text-align: center; }

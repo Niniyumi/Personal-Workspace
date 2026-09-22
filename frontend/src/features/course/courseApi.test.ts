@@ -50,10 +50,16 @@ describe('courseApi', () => {
     })
     mock.onGet('/courses').reply(200, [course])
     mock.onGet('/courses/9').reply(200, course)
+    mock.onGet('/courses/9/status').reply(200, {
+      status: 'PROCESSING', processingProgress: 65, errorMessage: null,
+    })
 
     await expect(api.create('access-token', 'Java 并发课')).resolves.toEqual(course)
     await expect(api.list('access-token')).resolves.toEqual([course])
     await expect(api.get('access-token', 9)).resolves.toEqual(course)
+    await expect(api.getStatus('access-token', 9)).resolves.toEqual({
+      status: 'PROCESSING', processingProgress: 65, errorMessage: null,
+    })
   })
 
   it('uploads one audio part with the exact multipart fields', async () => {
@@ -84,6 +90,13 @@ describe('courseApi', () => {
     await expect(api.generateNote('access-token', 9)).resolves.toMatchObject({ transcript: '转写' })
     await expect(api.retry('access-token', 9)).resolves.toMatchObject({ status: 'PROCESSING' })
     await expect(api.saveNote('access-token', 9, '# 新笔记')).resolves.toMatchObject({ noteContent: '# 新笔记' })
+  })
+
+  it('renames a course note', async () => {
+    mock.onPut('/courses/9/title', { title: '新笔记名称' }).reply(200, { title: '新笔记名称' })
+
+    await expect(api.rename('access-token', 9, '新笔记名称'))
+      .resolves.toMatchObject({ title: '新笔记名称' })
   })
 
   it('lists and downloads retained audio parts', async () => {

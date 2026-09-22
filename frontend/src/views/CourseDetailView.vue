@@ -16,6 +16,9 @@ const downloadPending = ref(false)
 const notePending = ref(false)
 const initialLoading = ref(true)
 const noteSaving = ref(false)
+const titleEditing = ref(false)
+const titleDraft = ref('')
+const renamePending = ref(false)
 const retryPending = ref(false)
 const originalAudioPending = ref(false)
 const audioLoading = ref(false)
@@ -56,7 +59,16 @@ async function refresh() {
 function startPolling() {
   if (pollTimer !== null) return
   // 转写是分钟级操作，用低频轮询保持实现轻量。
-  pollTimer = window.setInterval(() => void refresh(), 5000)
+  pollTimer = window.setInterval(() => void refreshProgress(), 5000)
+}
+
+async function refreshProgress() {
+  try {
+    const progress = await store.refreshStatus(courseId)
+    if (progress.status !== 'PROCESSING') await refresh()
+  } catch {
+    // Store 已提供统一错误信息。
+  }
 }
 
 async function saveNote() {
@@ -69,6 +81,32 @@ async function saveNote() {
     // Store 已提供错误信息。
   } finally {
     noteSaving.value = false
+  }
+}
+
+function startRename() {
+  if (!course.value) return
+  titleDraft.value = course.value.title
+  titleEditing.value = true
+}
+
+function cancelRename() {
+  titleEditing.value = false
+  titleDraft.value = ''
+}
+
+async function saveTitle() {
+  const title = titleDraft.value.trim()
+  if (!title || renamePending.value) return
+  renamePending.value = true
+  try {
+    await store.rename(courseId, title)
+    titleEditing.value = false
+    notice.value = '名称已更新'
+  } catch {
+    // Store 已提供统一错误信息。
+  } finally {
+    renamePending.value = false
   }
 }
 
@@ -152,7 +190,23 @@ async function downloadNote() {
       <RouterLink class="back-link" :to="{ name: 'courses' }"><ElIcon><ArrowLeft /></ElIcon> 返回课程记录</RouterLink>
       <p class="eyebrow" data-test="course-eyebrow">课程记录</p>
       <div v-if="course" class="detail-heading">
-        <div><h1>{{ course.title }}</h1><span>{{ Math.ceil(course.durationSeconds / 60) }} 分钟</span></div>
+        <div class="heading-main">
+          <div v-if="titleEditing" class="title-editor">
+            <ElInput
+              v-model="titleDraft"
+              data-test="course-title-input"
+              maxlength="160"
+              @keyup.enter="saveTitle"
+            />
+            <ElButton data-test="save-course-title" type="primary" :loading="renamePending" :disabled="!titleDraft.trim()" @click="saveTitle">保存</ElButton>
+            <ElButton data-test="cancel-course-title" @click="cancelRename">取消</ElButton>
+          </div>
+          <div v-else class="title-row">
+            <h1>{{ course.title }}</h1>
+            <ElButton class="rename-button" data-test="rename-course" round @click="startRename">重命名</ElButton>
+          </div>
+          <span>{{ course.courseName || course.title }} · {{ course.lessonDate || new Date(course.createdAt).toLocaleDateString('zh-CN') }} · {{ Math.ceil(course.durationSeconds / 60) }} 分钟</span>
+        </div>
       </div>
 
       <p v-if="store.error" class="error-notice" role="alert">{{ store.error }}</p>
@@ -251,6 +305,11 @@ async function downloadNote() {
 .eyebrow { margin: 0 0 10px; color: #f05a18; font-size: 16px; font-weight: 850; letter-spacing: .04em; }
 .content-card > span { margin: 0 0 8px; color: #f05a18; font-size: 10px; font-weight: 850; letter-spacing: .14em; }
 .detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; }
+.heading-main { min-width: 0; width: 100%; }
+.title-row, .title-editor { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.title-editor :deep(.el-input) { width: min(560px, 100%); }
+.title-editor :deep(.el-input__wrapper) { min-height: 48px; border-radius: 14px; }
+.title-editor :deep(.el-button), .rename-button { min-height: 44px; }
 .detail-heading h1 { margin: 0; font-size: clamp(34px, 5vw, 64px); letter-spacing: -.055em; }
 .detail-heading span { display: block; margin-top: 10px; color: #77736c; }
 .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 38px; }

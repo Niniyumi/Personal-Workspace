@@ -2,6 +2,7 @@ package com.niniyumi.personalagent.course.application;
 
 import com.niniyumi.personalagent.course.domain.Course;
 import com.niniyumi.personalagent.course.domain.CourseRepository;
+import com.niniyumi.personalagent.course.domain.CourseProgress;
 import com.niniyumi.personalagent.course.domain.CourseStatus;
 import java.time.Clock;
 import java.time.Instant;
@@ -24,13 +25,18 @@ public class CourseService {
     }
 
     public Course create(long userId, String title) {
+        return create(userId, title, null);
+    }
+
+    public Course create(long userId, String title, java.time.LocalDate lessonDate) {
         if (title == null || title.isBlank()) {
             throw new InvalidCourseTitleException();
         }
         Instant now = clock.instant();
         return repository.save(new Course(
                 null, userId, title.trim(), CourseStatus.RECORDING, 0,
-                0, null, null, null, now, now));
+                0, null, null, null, now, now).withLesson(title.trim(),
+                lessonDate == null ? java.time.LocalDate.now(clock.withZone(java.time.ZoneId.of("Asia/Shanghai"))) : lessonDate));
     }
 
     public Course get(long userId, long courseId) {
@@ -41,7 +47,23 @@ public class CourseService {
     }
 
     public List<Course> list(long userId) {
-        return repository.findAllByUserId(userId).stream().map(this::withCleanTranscript).toList();
+        return repository.findAllByUserId(userId);
+    }
+
+    public String rename(long userId, long courseId, String title) {
+        if (title == null || title.isBlank()) throw new InvalidCourseTitleException();
+        String normalized = title.trim();
+        if (!repository.updateTitle(courseId, userId, normalized, clock.instant())) {
+            throw new CourseNotFoundException();
+        }
+        log.info("重命名课程笔记, userId={}, courseId={}, newTitleChars={}",
+                userId, courseId, normalized.length());
+        return normalized;
+    }
+
+    public CourseProgress progress(long userId, long courseId) {
+        return repository.findProgressByIdAndUserId(courseId, userId)
+                .orElseThrow(CourseNotFoundException::new);
     }
 
     public Course saveNote(long userId, long courseId, String noteContent) {
@@ -53,7 +75,8 @@ public class CourseService {
                 current.id(), current.userId(), current.title(), current.status(),
                 current.durationSeconds(), current.processingProgress(), current.transcript(), normalize(noteContent),
                 current.errorMessage(), current.sourceType(), current.originalAudioPath(), current.expectedBytes(),
-                current.noteCandidate(), current.createdAt(), clock.instant());
+                current.noteCandidate(), current.createdAt(), clock.instant())
+                .withLesson(current.courseName(), current.lessonDate());
         return repository.update(updated);
     }
 
@@ -67,7 +90,8 @@ public class CourseService {
                 current.id(), current.userId(), current.title(), CourseStatus.PROCESSING,
                 current.durationSeconds(), 85, current.transcript(), current.noteContent(), null,
                 current.sourceType(), current.originalAudioPath(), current.expectedBytes(),
-                null, current.createdAt(), clock.instant()));
+                null, current.createdAt(), clock.instant())
+                .withLesson(current.courseName(), current.lessonDate()));
     }
 
     public Course resolveNoteCandidate(long userId, long courseId, NoteCandidateAction action) {
@@ -91,7 +115,8 @@ public class CourseService {
                 current.id(), current.userId(), current.title(), CourseStatus.READY,
                 current.durationSeconds(), 100, current.transcript(), note, null,
                 current.sourceType(), current.originalAudioPath(), current.expectedBytes(),
-                null, current.createdAt(), clock.instant()));
+                null, current.createdAt(), clock.instant())
+                .withLesson(current.courseName(), current.lessonDate()));
     }
 
     private Course withCleanTranscript(Course course) {
@@ -100,7 +125,8 @@ public class CourseService {
         return new Course(course.id(), course.userId(), course.title(), course.status(),
                 course.durationSeconds(), course.processingProgress(), cleaned, course.noteContent(),
                 course.errorMessage(), course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
-                course.noteCandidate(), course.createdAt(), course.updatedAt());
+                course.noteCandidate(), course.createdAt(), course.updatedAt())
+                .withLesson(course.courseName(), course.lessonDate());
     }
 
     private String normalize(String value) {

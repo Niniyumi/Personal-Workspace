@@ -37,6 +37,21 @@ beforeEach(() => {
 })
 
 describe('WeeklyReportsView', () => {
+  it('makes the full report history entry a prominent button', () => {
+    const wrapper = mount(WeeklyReportsView, {
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    })
+
+    const link = wrapper.findAllComponents(RouterLinkStub)
+      .find(candidate => {
+        const to = candidate.props('to')
+        return typeof to === 'object' && to?.name === 'weekly-report-history'
+      })
+    expect(link).toBeDefined()
+    expect(link?.classes()).toContain('history-all-button')
+    expect(link?.text()).toContain('按年份、内容查询全部周报')
+  })
+
   it('uses large controls for filtering report history', () => {
     const wrapper = mount(WeeklyReportsView, {
       global: { stubs: { RouterLink: RouterLinkStub } },
@@ -78,7 +93,8 @@ describe('WeeklyReportsView', () => {
 
     expect(wrapper.text()).toContain('2026-08-24')
     expect(wrapper.text()).toContain('完成周报模块的数据接口与联调')
-    const detailLink = wrapper.findAllComponents(RouterLinkStub)[1]
+    const detailLink = wrapper.findAllComponents(RouterLinkStub)
+      .find(candidate => candidate.attributes('data-test') === 'report-detail-7')
     expect(detailLink?.props('to')).toEqual({
       name: 'weekly-report-detail',
       params: { id: 7 },
@@ -123,6 +139,54 @@ describe('WeeklyReportsView', () => {
       sourceFileName: '周报一.docx、周报二.docx',
     }))
     expect(wrapper.get('[data-test="save-batch-reports"]').classes()).toContain('standard-action-button')
+  })
+
+  it('shows import progress and saves drafts from every preview page', async () => {
+    const dates = ['2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28', '2026-10-05', '2026-10-12']
+    let releaseFirst!: (value: unknown) => void
+    mocks.recognizeDocx.mockImplementationOnce(() => new Promise(resolve => { releaseFirst = resolve }))
+    dates.slice(1).forEach((weekStartDate, index) => {
+      mocks.recognizeDocx.mockResolvedValueOnce({
+        weekStartDate, coreWork: `工作${index + 2}`, problems: null,
+        nextWeekPlan: null, sourceFileName: `周报${index + 2}.docx`,
+      })
+    })
+    mocks.create.mockResolvedValue({ id: 8 })
+    const wrapper = mount(WeeklyReportsView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    const input = wrapper.get('[data-test="weekly-docx-input"]')
+    Object.defineProperty(input.element, 'files', {
+      value: dates.map((_, index) => new File(['a'], `周报${index + 1}.docx`)),
+    })
+
+    await input.trigger('change')
+    expect(wrapper.find('.import-progress').text()).toContain('0/6')
+    releaseFirst({ weekStartDate: dates[0], coreWork: '工作1', problems: null,
+      nextWeekPlan: null, sourceFileName: '周报1.docx' })
+    await flushPromises()
+
+    expect(wrapper.findAll('[data-test="batch-report-item"]')).toHaveLength(5)
+    await wrapper.get('[data-test="batch-next"]').trigger('click')
+    expect(wrapper.findAll('[data-test="batch-report-item"]')).toHaveLength(1)
+    await wrapper.get('[data-test="save-batch-reports"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.create).toHaveBeenCalledTimes(6)
+    expect(wrapper.text()).toContain('成功导入 6 份')
+    expect(document.querySelector('.el-message')?.textContent).toContain('成功导入 6 份')
+  })
+
+  it('shows recognition failure when no file produced a draft', async () => {
+    mocks.recognizeDocx.mockRejectedValue(new Error('识别失败'))
+    const wrapper = mount(WeeklyReportsView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    const input = wrapper.get('[data-test="weekly-docx-input"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [new File(['a'], '周报一.docx'), new File(['b'], '周报二.docx')],
+    })
+
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('2 个文件识别失败')
   })
 
   it('shows history loading instead of an empty month', async () => {

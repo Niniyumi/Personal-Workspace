@@ -61,7 +61,7 @@ public class CourseImportProcessor {
                 course = courses.update(new Course(course.id(), course.userId(), course.title(),
                         CourseStatus.PROCESSING, totalSeconds, 10, null, null, null,
                         course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
-                        course.createdAt(), clock.instant()));
+                        course.createdAt(), clock.instant()).withLesson(course.courseName(), course.lessonDate()));
                 long totalBytes = segments.stream().mapToLong(CourseAudioSegmenter.Segment::fileSize).sum();
                 log.info("课程录音切分完成, userId={}, courseId={}, parts={}, durationSeconds={}, fileBytes={}, storagePath={}",
                         userId, courseId, segments.size(), totalSeconds, totalBytes, course.originalAudioPath());
@@ -75,7 +75,7 @@ public class CourseImportProcessor {
             courses.update(new Course(course.id(), course.userId(), course.title(), CourseStatus.FAILED,
                     course.durationSeconds(), course.processingProgress(), course.transcript(), null, message,
                     course.sourceType(), course.originalAudioPath(), course.expectedBytes(),
-                    course.createdAt(), clock.instant()));
+                    course.createdAt(), clock.instant()).withLesson(course.courseName(), course.lessonDate()));
         }
     }
 }

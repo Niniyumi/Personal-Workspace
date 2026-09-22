@@ -9,6 +9,21 @@ export interface WeeklyReport {
   updatedAt: string
 }
 
+export interface WeeklyReportListItem {
+  id: number
+  weekStartDate: string
+  createdAt: string
+  sourceFileName: string | null
+  characterCount: number
+  preview: string
+}
+
+export interface WeeklyReportSearchResult {
+  items: WeeklyReportListItem[]
+  total: number
+  page: number
+}
+
 export interface WeeklyReportInput {
   weekStartDate: string
   coreWork: string

@@ -28,6 +28,16 @@ const report: WeeklyReport = {
 afterEach(() => mock.reset())
 
 describe('weeklyReportApi', () => {
+  it('searches one year with optional month, keyword and page', async () => {
+    const result = { items: [], total: 0, page: 2 }
+    mock.onGet('/weekly-reports/search', {
+      params: { year: 2026, month: 8, keyword: '登录', page: 2 },
+    }).reply(200, result)
+
+    await expect(api.search('access-token', 2026, 8, '登录', 2)).resolves.toEqual(result)
+    expect(mock.history.get[0]?.headers?.Authorization).toBe('Bearer access-token')
+  })
+
   it('loads a month and one detail with bearer authentication', async () => {
     mock.onGet('/weekly-reports', { params: { year: 2026, month: 8 } }).reply((config) => {
       expect(config.headers?.Authorization).toBe('Bearer access-token')

@@ -20,6 +20,7 @@ public class CoursePlaybackController {
         this.playback = playback;
     }
 
+    /** 使用短期播放凭证读取课程原始录音。 */
     @GetMapping("/{ticket}")
     public ResponseEntity<Resource> play(@PathVariable String ticket) {
         Resource resource = playback.open(ticket);

@@ -4,6 +4,11 @@ export interface MonthlyActivity {
   courseNotes: number
 }
 
+export interface YearlyWeeklyReports {
+  year: number
+  count: number
+}
+
 export interface DashboardRecentItem {
   type: 'WEEKLY_REPORT' | 'COURSE'
   id: number
@@ -19,5 +24,6 @@ export interface DashboardData {
   monthCourseNotes: number
   monthRecordingSeconds: number
   monthlyActivity: MonthlyActivity[]
+  yearlyWeeklyReports: YearlyWeeklyReports[]
   recentItems: DashboardRecentItem[]
 }

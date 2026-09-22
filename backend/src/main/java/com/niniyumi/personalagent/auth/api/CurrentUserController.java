@@ -21,6 +21,7 @@ public class CurrentUserController {
         this.userRepository = userRepository;
     }
 
+    /** 查询当前已登录用户的基本资料。 */
     @GetMapping("/me")
     public UserResponse currentUser(@AuthenticationPrincipal AuthenticatedUser authenticatedUser) {
         User user = userRepository.findById(authenticatedUser.userId())
